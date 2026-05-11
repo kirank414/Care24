@@ -1,0 +1,6 @@
+{
+  "name": "Care24",
+  "description": "Enterprise-level elderly nursing and healthcare assistance platform connecting families with verified caregivers.",
+  "requestFramePermissions": ["geolocation", "camera"],
+  "majorCapabilities": ["authentication", "healthcare-services", "caregiver-management", "admin-dashboard"]
+}
