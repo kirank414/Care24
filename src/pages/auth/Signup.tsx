@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'motion/react';
-import { Heart, Mail, Lock, ArrowRight, User, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Heart, Mail, Lock, ArrowRight, User, ShieldCheck, CheckCircle2, UserPlus } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,14 +14,19 @@ import { useAuthStore } from '@/src/store';
 import { api } from '@/src/api';
 import { toast } from 'sonner';
 
-const loginSchema = z.object({
+const signupSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type SignupFormValues = z.infer<typeof signupSchema>;
 
-export function LoginPage() {
+export function SignupPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated, role } = useAuthStore();
@@ -33,15 +38,17 @@ export function LoginPage() {
     }
   }, [isAuthenticated, role, navigate, location]);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: SignupFormValues) => {
     try {
-      const response = await api.post('/auth/login', {
+      const response = await api.post('/auth/signup', {
+        name: data.name,
         email: data.email,
         password: data.password,
+        role: 'user',
       });
 
       const { _id, name, email, role: userRoleString, token } = response.data;
@@ -54,11 +61,11 @@ export function LoginPage() {
         role: uppercaseRole,
       }, token);
 
-      toast.success('Successfully authenticated!');
+      toast.success('Account created successfully!');
       const destination = location.state?.from?.pathname || (uppercaseRole === 'ADMIN' ? '/dashboard/admin' : uppercaseRole === 'CAREGIVER' ? '/dashboard/caregiver' : '/dashboard');
       navigate(destination, { replace: true });
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Authentication failure. Check clinical credentials.';
+      const message = error.response?.data?.message || 'Signup failure. Please try again.';
       toast.error(message);
     }
   };
@@ -85,13 +92,13 @@ export function LoginPage() {
             </div>
             <div className="text-left">
               <span className="text-4xl font-black tracking-tighter text-slate-900 block leading-none">Care<span className="text-primary">24</span></span>
-              <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase tracking-[0.4em] leading-none mt-2 px-3 py-1 rounded-full">HQ SYSTEM</Badge>
+              <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase tracking-[0.4em] leading-none mt-2 px-3 py-1 rounded-full">ONBOARDING</Badge>
             </div>
           </Link>
           
           <div className="space-y-4">
-            <h1 className="text-5xl font-black text-slate-950 tracking-[-0.05em]">Welcome Back</h1>
-            <p className="text-slate-500 font-medium text-lg leading-relaxed px-6">Login to your account to manage your care and schedule.</p>
+            <h1 className="text-5xl font-black text-slate-950 tracking-[-0.05em]">Create Account</h1>
+            <p className="text-slate-500 font-medium text-lg leading-relaxed px-6">Join Care24 to find the best caregivers for your loved ones.</p>
           </div>
         </div>
 
@@ -99,14 +106,28 @@ export function LoginPage() {
 
         <Card className="rounded-[48px] border-none shadow-[0_50px_120px_-30px_rgba(0,0,0,0.12)] overflow-hidden bg-white/80 backdrop-blur-2xl ring-1 ring-slate-100 p-2">
           <CardContent className="p-12 bg-white rounded-[40px]">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 pl-2">Full Name</Label>
+                <div className="relative">
+                  <UserPlus className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
+                  <Input 
+                    id="name" 
+                    placeholder="Enter full name"
+                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    {...register('name')}
+                  />
+                </div>
+                {errors.name && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.name.message}</p>}
+              </div>
+
               <div className="space-y-3">
                 <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 pl-2">Email Address</Label>
                 <div className="relative">
                   <Mail className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
                   <Input 
                     id="email" 
-                    placeholder="Enter your email"
+                    placeholder="email@example.com"
                     className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
                     {...register('email')}
                   />
@@ -115,12 +136,7 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between px-2">
-                  <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Password</Label>
-                  <Link to="#" className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest">
-                    Forgot Password?
-                  </Link>
-                </div>
+                <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 pl-2">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
                   <Input 
@@ -134,33 +150,36 @@ export function LoginPage() {
                 {errors.password && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.password.message}</p>}
               </div>
 
+              <div className="space-y-3">
+                <Label htmlFor="confirmPassword" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 pl-2">Confirm Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
+                  <Input 
+                    id="confirmPassword" 
+                    type="password" 
+                    placeholder="••••••••"
+                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    {...register('confirmPassword')}
+                  />
+                </div>
+                {errors.confirmPassword && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.confirmPassword.message}</p>}
+              </div>
+
               <Button type="submit" className="w-full h-20 rounded-[28px] font-black text-xs uppercase tracking-[0.35em] shadow-3xl shadow-blue-500/20 bg-slate-950 hover:bg-black text-white active:scale-95 transition-all" disabled={isSubmitting}>
-                {isSubmitting ? 'LOGGING IN...' : 'LOGIN'} 
+                {isSubmitting ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'} 
                 {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
               </Button>
             </form>
 
-            <div className="mt-14 pt-10 border-t border-slate-50">
-               <div className="flex flex-col items-center gap-10">
-                  <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Audit & Compliance Standards</p>
-                  <div className="grid grid-cols-2 gap-5 w-full">
-                    <div className="flex flex-col items-center text-center gap-3 p-5 rounded-[24px] border border-slate-100 bg-slate-50/50">
-                       <ShieldCheck size={24} className="text-emerald-500" />
-                       <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-tight">HIPAA Level 3<br />Data Encryption</span>
-                    </div>
-                    <div className="flex flex-col items-center text-center gap-3 p-5 rounded-[24px] border border-slate-100 bg-slate-50/50">
-                       <CheckCircle2 size={24} className="text-blue-500" />
-                       <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-tight">ISO-27001<br />Certified Ops</span>
-                    </div>
-                  </div>
-               </div>
+            <div className="mt-10 pt-8 border-t border-slate-50 text-center">
+               <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Audit & Compliance Standards</p>
             </div>
           </CardContent>
         </Card>
 
         <p className="mt-12 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">
-           New to Care24? <br /><br />
-           <Link to="/signup" className="text-slate-950 font-black hover:underline underline-offset-4 decoration-primary decoration-2">Create Account</Link>
+           Already have an account? <br /><br />
+           <Link to="/login" className="text-slate-950 font-black hover:underline underline-offset-4 decoration-primary decoration-2">Log In</Link>
         </p>
       </motion.div>
     </div>

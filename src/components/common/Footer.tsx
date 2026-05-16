@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 
 export function Footer() {
   return (
-    <footer className="bg-slate-950 text-slate-300 relative overflow-hidden">
+    <footer className="bg-[#071225] text-slate-300 relative overflow-hidden snap-start">
       {/* Refined Decorative Blur */}
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[140px] -translate-y-1/3 translate-x-1/3 pointer-events-none"></div>
       

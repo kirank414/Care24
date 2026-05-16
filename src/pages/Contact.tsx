@@ -23,13 +23,17 @@ import { Link } from 'react-router-dom';
 
 export function ContactPage() {
   return (
-    <div className="pt-32 pb-24 bg-white min-h-screen selection:bg-primary/10">
+    <div className="bg-slate-50 min-h-screen selection:bg-primary/10 pb-12 space-y-12">
+
       {/* Background Polish */}
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.04),transparent_50%)]"></div>
       
+      {/* Header + Form Section */}
+      <section className="h-full snap-start scroll-mt-12 flex items-center justify-center overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-xl bg-white py-24">
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
-        <div className="text-center mb-32 max-w-4xl mx-auto">
+        <div className="text-center mb-10 max-w-4xl mx-auto">
           <Badge className="bg-primary/5 text-primary border-primary/20 px-5 py-2 mb-10 text-[10px] font-black uppercase tracking-[0.4em] rounded-full shadow-sm">
             Command Center
           </Badge>
@@ -44,10 +48,10 @@ export function ContactPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-20 lg:gap-32">
           {/* Contact Details - Left Side */}
-          <div className="lg:col-span-5 space-y-16">
-             <div className="space-y-12">
+          <div className="lg:col-span-5 space-y-6">
+             <div className="space-y-6">
                 <h2 className="text-4xl font-black text-slate-950 tracking-tight">Direct Channels.</h2>
-                <div className="space-y-10">
+                <div className="space-y-4">
                    {[
                      { t: 'Emergency Hotline', d: '1-800-SOS-24', icon: PhoneCall, color: 'text-rose-600', bg: 'bg-rose-50' },
                      { t: 'Clinical Support', d: 'support@care24.health', icon: Mail, color: 'text-primary', bg: 'bg-primary/5' },
@@ -85,7 +89,7 @@ export function ContactPage() {
           <div className="lg:col-span-7">
              <Card className="rounded-[60px] border-slate-100 shadow-4xl p-2 bg-slate-50/50">
                 <CardContent className="bg-white rounded-[56px] p-12 lg:p-20">
-                   <h3 className="text-4xl font-black text-slate-950 tracking-tight mb-12">Send a Message.</h3>
+                   <h3 className="text-3xl font-black text-slate-950 tracking-tight mb-6">Send a Message.</h3>
                    <form className="space-y-8">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                          <div className="space-y-3">
@@ -126,9 +130,13 @@ export function ContactPage() {
              </Card>
           </div>
         </div>
+      </div>
+      </section>
 
-        {/* Global Reach & FAQ Shortlink */}
-        <section className="mt-48 py-40 border-t border-slate-100">
+      {/* Global Reach & FAQ Shortlink */}
+      <section className="h-full snap-start scroll-mt-12 flex items-center justify-center overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-xl bg-white py-24 mb-12">
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
            <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
               <div>
                  <h2 className="text-5xl font-black text-slate-950 tracking-tighter mb-8 italic">Instant <br /><span className="text-slate-300 not-italic">Resolutions.</span></h2>
@@ -152,8 +160,8 @@ export function ContactPage() {
                  </div>
               </div>
            </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
   );
 }

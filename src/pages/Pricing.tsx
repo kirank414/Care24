@@ -10,8 +10,6 @@ import {
   Stethoscope,
   Heart,
   TrendingUp,
-  CreditCard,
-  Lock,
   Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -73,12 +71,16 @@ export function PricingPage() {
   ];
 
   return (
-    <div className="pt-32 pb-24 bg-white min-h-screen">
+    <div className="bg-slate-50 min-h-screen pb-12 space-y-12">
+
       {/* Refined Mesh Background */}
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.06),transparent_50%)]"></div>
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-20">
+      {/* Header + Plans Section */}
+      <section className="!mt-0 scroll-mt-12 flex flex-col items-center w-full pt-8 pb-16 px-0 bg-white">
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
         <Badge className="bg-primary/5 text-primary border-primary/20 px-6 py-2 mb-10 text-[10px] font-bold uppercase tracking-[0.3em] rounded-full shadow-sm">
            Standardized Pricing
         </Badge>
@@ -116,25 +118,24 @@ export function PricingPage() {
             transition={{ duration: 0.8, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
             viewport={{ once: true }}
           >
-            <Card className={`h-full border-none rounded-[56px] p-2 transition-all duration-700 hover:shadow-4xl ${plan.popular ? 'bg-slate-950 text-white shadow-3xl scale-105 relative z-10' : 'bg-slate-50 text-slate-950 hover:bg-white border-slate-100 shadow-xl'}`}>
-              <CardContent className="p-12 flex flex-col h-full bg-inherit rounded-[50px]">
+            <Card className={`h-full border-none rounded-[56px] p-2 transition-all duration-700 hover:shadow-4xl ${plan.popular ? 'bg-slate-950 text-white shadow-3xl scale-105 relative z-10 !overflow-visible ring-4 ring-primary/20' : 'bg-slate-50 text-slate-950 hover:bg-white border-slate-100 shadow-xl'}`}>
+              <CardContent className="p-8 flex flex-col h-full bg-inherit rounded-[50px]">
                  {plan.popular && (
-                   <div className="absolute top-10 right-10">
-                      <Badge className="bg-primary text-white border-none px-6 py-2 text-[9px] font-black tracking-[0.2em] uppercase rounded-full shadow-lg">RECOMMENDED</Badge>
+                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+                      <Badge className="bg-primary text-white border-none px-6 py-2 text-[9px] font-black tracking-[0.4em] uppercase rounded-full shadow-2xl">MOST TRUSTED PLAN</Badge>
                    </div>
                  )}
-                 
-                 <div className="mb-14">
+                 <div className="mb-6">
                     <h3 className="text-3xl font-bold mb-3 tracking-tight">{plan.name}</h3>
                     <p className={`text-sm font-medium ${plan.popular ? 'text-slate-400' : 'text-slate-500'}`}>{plan.tagline}</p>
                  </div>
 
-                 <div className="mb-16 flex items-baseline gap-3">
+                 <div className="mb-6 flex items-baseline gap-3">
                     <span className="text-6xl font-black tracking-[-0.05em]">{plan.price !== 'Contact' && '$'}{plan.price}</span>
                     <span className={`text-sm font-black uppercase tracking-[0.2em] ${plan.popular ? 'text-slate-500' : 'text-slate-400'}`}>{plan.unit}</span>
                  </div>
 
-                 <div className="space-y-6 mb-20 flex-grow">
+                 <div className="space-y-4 mb-8 flex-grow">
                     {plan.features.map(feat => (
                       <div key={feat} className="flex items-center gap-5 group/item">
                          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-transform group-hover/item:scale-110 ${plan.popular ? 'bg-white/10 text-primary' : 'bg-primary/10 text-primary'}`}>
@@ -157,9 +158,12 @@ export function PricingPage() {
           </motion.div>
         ))}
       </div>
+      
+      </section>
 
       {/* Institutional Network Section */}
-      <section className="mt-60 border-t border-slate-50 py-40 overflow-hidden bg-slate-50 shadow-inner rounded-[80px] mx-4 sm:mx-8">
+      <section className="min-h-screen scroll-mt-12 flex items-center justify-center overflow-hidden bg-slate-50 rounded-[48px] mx-4 sm:mx-8 shadow-inner border border-slate-100 py-32">
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] mb-24">Institutional Network Access</h3>
            <div className="flex flex-wrap justify-center items-center gap-24 opacity-30 grayscale saturate-0 hover:opacity-100 hover:grayscale-0 transition-all duration-1000">
@@ -186,15 +190,6 @@ export function PricingPage() {
         </div>
       </section>
 
-      {/* Security Governance Floor */}
-      <section className="py-32 bg-white">
-         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap justify-center gap-20 text-slate-400 font-black uppercase tracking-[0.35em] text-[9px]">
-            <div className="flex items-center gap-3 transition-colors hover:text-slate-950"><Lock size={18} /> 2048-BIT ENCRYPTION</div>
-            <div className="flex items-center gap-3 transition-colors hover:text-slate-950"><ShieldCheck size={18} /> HIPAA LEVEL III</div>
-            <div className="flex items-center gap-3 transition-colors hover:text-slate-950"><CreditCard size={18} /> PCI-DSS COMPLIANT</div>
-            <div className="flex items-center gap-3 transition-colors hover:text-slate-950"><Check size={18} /> ZERO-TRUST LOGGING</div>
-         </div>
-      </section>
     </div>
   );
 }

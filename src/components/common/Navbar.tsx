@@ -59,53 +59,59 @@ export function Navbar() {
          </div>
       </div>
 
-      <nav className={`fixed w-full z-50 transition-all duration-700 ${isScrolled ? 'top-0 px-2' : 'top-0 lg:top-10 px-0'}`}>
+      <nav className="relative w-full z-50 flex-none bg-white">
         <div className="max-w-7xl mx-auto">
           <div className={`transition-all duration-700 rounded-[32px] ${isScrolled ? 'bg-white/80 backdrop-blur-2xl shadow-4xl shadow-blue-500/10 border border-white/50 py-3 px-8' : 'bg-transparent py-4 px-4'}`}>
-            <div className="flex justify-between items-center">
-              <Link to="/" className="flex items-center space-x-4 group">
+            <div className="flex justify-between items-center gap-4">
+              <Link to="/" className="flex items-center space-x-4 group flex-shrink-0">
                 <div className="bg-primary p-2.5 rounded-2xl shadow-xl transition-transform group-hover:scale-110 group-hover:rotate-3">
                   <Heart className="h-6 w-6 text-white fill-white" />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-2xl font-bold tracking-tighter text-slate-900 transition-colors">Care<span className="text-primary group-hover:text-slate-900 transition-colors">24</span></span>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] leading-none">Enterprise Health</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] leading-none hidden sm:block">Elderly Healthcare Support</span>
                 </div>
               </Link>
 
-              {/* Desktop Nav */}
-              <div className="hidden md:flex items-center space-x-1">
+              {/* Desktop Nav - Centered */}
+              <div className="hidden lg:flex items-center space-x-1 flex-1 justify-center">
                 {navLinks.map((link) => (
                   <Link 
                     key={link.name} 
                     to={link.href} 
-                    className={`px-5 py-2.5 text-sm font-bold transition-all rounded-xl relative group ${location.pathname === link.href ? 'text-primary' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}
+                    className={`px-3 py-2 text-sm font-bold transition-all rounded-xl relative group whitespace-nowrap ${location.pathname === link.href ? 'text-primary' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}
                   >
                     {link.name}
-                    {location.pathname === link.href && (
-                      <motion.div layoutId="nav-pill" className="absolute bottom-1 left-5 right-5 h-0.5 bg-primary rounded-full"></motion.div>
-                    )}
                   </Link>
                 ))}
               </div>
 
-              <div className="hidden md:flex items-center space-x-6">
+              <div className="hidden md:flex items-center space-x-4 flex-shrink-0 ml-auto">
+                <div className="hidden xl:flex flex-col items-end mr-2">
+                   <div className="flex items-center gap-2 text-slate-900">
+                      <Phone size={14} className="text-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Emergency Support</span>
+                   </div>
+                   <span className="text-[10px] font-bold text-primary uppercase tracking-widest leading-none">24/7 Available</span>
+                </div>
                 {isAuthenticated ? (
-                  <Link to="/dashboard" className="flex items-center space-x-4 p-1 pl-4 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-all border border-slate-100 group">
-                    <span className="text-sm font-bold text-slate-600 group-hover:text-primary transition-colors">Managed Account</span>
-                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
-                      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`} alt="Avatar" />
-                    </div>
-                  </Link>
-                ) : (
-                  <div className="flex items-center space-x-4">
-                    <Link to="/login" className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors px-4 py-2">
-                      Sign In
-                    </Link>
-                    <Button className="rounded-2xl bg-primary hover:bg-primary/90 px-8 h-12 font-bold shadow-xl shadow-blue-500/20 text-sm whitespace-nowrap" render={<Link to="/signup" />} nativeButton={false}>
-                      Book Appointment <ArrowRight className="ml-2 h-4 w-4" />
+                  <div className="flex items-center space-x-3">
+                    <Button className="rounded-2xl bg-slate-950 hover:bg-black px-6 h-12 font-bold shadow-xl shadow-slate-900/20 text-xs uppercase tracking-widest text-white whitespace-nowrap" render={<Link to="/dashboard" />} nativeButton={false}>
+                      Dashboard
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="rounded-2xl border-slate-200 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 px-6 h-12 font-bold text-xs uppercase tracking-widest text-slate-600 transition-all whitespace-nowrap" 
+                      onClick={() => logout()}
+                      nativeButton={true}
+                    >
+                      Logout
                     </Button>
                   </div>
+                ) : (
+                  <Button className="rounded-2xl bg-primary hover:bg-primary/90 px-8 h-12 font-bold shadow-xl shadow-blue-500/20 text-sm whitespace-nowrap" render={<Link to="/signup" />} nativeButton={false}>
+                    Book a Service
+                  </Button>
                 )}
               </div>
 
@@ -144,6 +150,14 @@ export function Navbar() {
                             </div>
                             <Button className="w-full h-16 rounded-2xl font-bold" render={<Link to="/dashboard" />} nativeButton={false}>
                                GO TO DASHBOARD
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="w-full h-16 rounded-2xl border-destructive/20 text-destructive hover:bg-destructive/10 font-bold uppercase tracking-widest text-xs" 
+                              onClick={() => logout()}
+                              nativeButton={true}
+                            >
+                               LOGOUT
                             </Button>
                           </div>
                         ) : (

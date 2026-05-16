@@ -24,6 +24,7 @@ export interface Service {
   description: string;
   startingPrice: number;
   icon: string;
+  image?: string;
   duration?: string;
   category: 'NURSING' | 'PHYSIO' | 'COMPANION' | 'DEMENTIA' | 'POST_OP';
 }

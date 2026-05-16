@@ -55,36 +55,42 @@ export function AboutPage() {
   ];
 
   return (
-    <div className="pt-32 pb-24 bg-white min-h-screen">
+    <div className="bg-slate-50 min-h-screen pb-12 space-y-12">
+
       {/* Premium Background */}
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.05),transparent_50%)]"></div>
       <div className="absolute top-0 left-0 w-full h-[600px] bg-slate-950 -z-10 transform -skew-y-6 -translate-y-48"></div>
 
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 mb-40">
+      <section className="!mt-0 scroll-mt-12 flex flex-col items-center w-full pt-8 pb-16 px-4 sm:px-10 relative overflow-hidden bg-white">
+
+        <div className="w-full">
         <motion.div
            initial={{ opacity: 0, y: 20 }}
            animate={{ opacity: 1, y: 0 }}
-           className="text-center lg:text-left text-white"
+           className="text-center text-slate-950"
         >
-          <Badge className="bg-primary/20 text-blue-300 border-none px-6 py-2 mb-10 text-[10px] font-black uppercase tracking-[0.4em] rounded-full">
+          <Badge className="bg-primary/10 text-primary border-primary/20 px-6 py-2 mb-4 text-[10px] font-black uppercase tracking-[0.4em] rounded-full">
             Our Methodology
           </Badge>
-          <h1 className="text-7xl lg:text-[130px] font-black tracking-[-0.07em] leading-[0.8] mb-12">
+          <h1 className="text-7xl lg:text-[130px] font-black text-slate-950 tracking-[-0.07em] leading-[0.8] mb-6">
             Precision care, <br />
             <span className="text-slate-400 font-medium italic">industrialized.</span>
           </h1>
-          <p className="text-xl lg:text-3xl text-slate-400 leading-relaxed font-medium max-w-4xl tracking-tight">
+          <p className="text-xl lg:text-3xl text-slate-500 leading-relaxed font-medium max-w-4xl mx-auto tracking-tight">
             We are a clinical intelligence platform redefining how the world cares for its elderly. No compromises. Just standardized medical excellence.
           </p>
         </motion.div>
-      </div>
+        </div>
+      </section>
 
       {/* Core Pillars Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-60">
-        <div className="text-center mb-24">
+      <section className="h-full snap-start scroll-mt-12 flex items-center justify-center bg-white overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-xl">
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-4">
            <Badge className="bg-primary/5 text-primary border-primary/20 px-6 py-1.5 mb-8 text-[9px] font-black uppercase tracking-[0.4em] rounded-full">Core Principles</Badge>
-           <h2 className="text-5xl lg:text-6xl font-black text-slate-950 tracking-[-0.04em]">Our clinical foundation.</h2>
+           <h2 className="text-4xl lg:text-5xl font-black text-slate-950 tracking-[-0.04em]">Our clinical foundation.</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {pillars.map((p, i) => (
@@ -98,7 +104,7 @@ export function AboutPage() {
             >
                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform"></div>
                
-               <div className="w-20 h-20 rounded-3xl bg-white flex items-center justify-center text-primary mb-10 shadow-2xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+               <div className="w-20 h-20 rounded-3xl bg-white flex items-center justify-center text-primary mb-4 shadow-2xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
                   <p.icon size={36} strokeWidth={1.5} />
                </div>
                <Badge className="bg-emerald-50 text-emerald-600 border-none mb-6 font-black uppercase text-[9px] tracking-widest">{p.stats}</Badge>
@@ -108,9 +114,11 @@ export function AboutPage() {
           ))}
         </div>
       </div>
+      </section>
 
       {/* Care Philosophy & Emotional Storytelling */}
-      <section className="py-24 bg-white mb-60">
+      <section className="h-full snap-start scroll-mt-12 flex items-center justify-center bg-white overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-xl">
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
            <div className="flex flex-col lg:flex-row items-center gap-24">
               <div className="lg:w-1/2 relative">
@@ -128,9 +136,9 @@ export function AboutPage() {
                  </div>
               </div>
               <div className="lg:w-1/2">
-                 <Badge className="bg-rose-50 text-rose-600 mb-10 px-6 py-2 rounded-full font-black uppercase tracking-widest text-[10px]">The Human Element</Badge>
-                 <h2 className="text-5xl lg:text-7xl font-black text-slate-950 tracking-tighter leading-[0.9] mb-10">Care philosophy <br /><span className="text-slate-400 italic">rooted in empathy.</span></h2>
-                 <p className="text-xl text-slate-500 font-medium leading-relaxed mb-12">
+                 <Badge className="bg-rose-50 text-rose-600 mb-4 px-6 py-2 rounded-full font-black uppercase tracking-widest text-[10px]">The Human Element</Badge>
+                 <h2 className="text-4xl lg:text-5xl font-black text-slate-950 tracking-tighter leading-[0.9] mb-6">care philosophy <br /><span className="text-slate-400 italic">rooted in empathy.</span></h2>
+                 <p className="text-xl text-slate-700 font-medium leading-relaxed mb-6">
                    At Care24, we believe that medical excellence is only half the battle. True healing happens when a patient feels seen, heard, and respected in their own home. Our philosophy merges rigorous clinical protocols with deep emotional intelligence.
                  </p>
                  <div className="space-y-8">
@@ -156,11 +164,12 @@ export function AboutPage() {
       </section>
 
       {/* Impact Metrics - High Density */}
-      <section className="py-40 bg-slate-50 relative overflow-hidden mb-60">
+      <section className="min-h-screen scroll-mt-12 flex items-center justify-center bg-slate-50 relative overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-inner">
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-           <div className="text-center mb-32">
-              <Badge className="bg-primary/5 text-primary border-primary/20 px-6 py-2 mb-10 text-[10px] font-black uppercase tracking-[0.4em] rounded-full shadow-sm">Scale & Impact</Badge>
-              <h2 className="text-6xl lg:text-[100px] font-black text-slate-950 tracking-[-0.07em] leading-[0.8] italic">Quantifiable <br /><span className="text-slate-300 not-italic">Healthcare Transformation.</span></h2>
+           <div className="text-center mb-4">
+              <Badge className="bg-primary/5 text-primary border-primary/20 px-6 py-2 mb-4 text-[10px] font-black uppercase tracking-[0.4em] rounded-full shadow-sm">Scale & Impact</Badge>
+              <h2 className="text-5xl lg:text-7xl font-black text-slate-950 tracking-[-0.07em] leading-[0.8] italic">Quantifiable <br /><span className="text-slate-300 not-italic">Healthcare Transformation.</span></h2>
            </div>
            
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
@@ -183,12 +192,13 @@ export function AboutPage() {
       </section>
 
       {/* Enterprise Governance Section */}
-      <section className="py-40 bg-slate-950 text-white overflow-hidden rounded-[80px] mx-4 sm:mx-8 mb-60 relative">
+      <section className="min-h-screen scroll-mt-12 flex items-center justify-center bg-slate-950 text-white overflow-hidden rounded-[48px] mx-4 sm:mx-8 relative shadow-2xl">
+
          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/graphy.png')] opacity-10 pointer-events-none"></div>
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
                <div>
-                  <h2 className="text-5xl lg:text-7xl font-black tracking-[-0.05em] mb-12">Total governance. <br /><span className="text-primary italic">No blind spots.</span></h2>
+                  <h2 className="text-4xl lg:text-5xl font-black tracking-[-0.05em] mb-6">Total governance. <br /><span className="text-primary italic">No blind spots.</span></h2>
                   <div className="space-y-8">
                      {[
                        { t: 'Verified Identity', d: 'Biometric multi-factor authentication for every caregiver visit.', icon: Database },
@@ -211,7 +221,7 @@ export function AboutPage() {
                   <div className="absolute inset-0 bg-primary/20 blur-[120px] rounded-full"></div>
                   <div className="relative rounded-[60px] border border-white/10 overflow-hidden shadow-4xl aspect-square bg-slate-900 flex items-center justify-center p-20 group">
                      <div className="text-center">
-                        <div className="w-32 h-32 rounded-[40px] bg-primary mx-auto mb-10 flex items-center justify-center shadow-3xl shadow-primary/20 group-hover:scale-110 transition-transform duration-700">
+                        <div className="w-32 h-32 rounded-[40px] bg-primary mx-auto mb-4 flex items-center justify-center shadow-3xl shadow-primary/20 group-hover:scale-110 transition-transform duration-700">
                            <Award size={64} className="text-white" />
                         </div>
                         <p className="text-xs font-black uppercase tracking-[0.4em] text-slate-500 mb-2">Accreditation</p>
@@ -225,8 +235,10 @@ export function AboutPage() {
       </section>
 
       {/* History Timeline */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-60">
-        <div className="text-center mb-24">
+      <section className="h-full snap-start scroll-mt-12 flex items-center justify-center bg-white overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-xl">
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-4">
            <Badge className="bg-primary/5 text-primary border-none px-6 py-1.5 mb-8 text-[9px] font-black uppercase tracking-[0.4em] rounded-full">Evolution</Badge>
            <h2 className="text-5xl font-black text-slate-950 tracking-[-0.04em]">Our trajectory to standard.</h2>
         </div>
@@ -248,22 +260,26 @@ export function AboutPage() {
           ))}
         </div>
       </div>
+      </section>
 
       {/* Final CTA */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-40">
+      <section className="min-h-screen scroll-mt-12 flex items-center justify-center bg-white overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-xl mb-12">
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
          <div className="p-20 rounded-[80px] bg-primary relative overflow-hidden text-center group">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_0%,transparent_100%)] pointer-events-none"></div>
-            <h2 className="text-5xl lg:text-7xl font-black text-white tracking-tight mb-12 relative z-10">Experience the <br />new standard.</h2>
+            <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tight mb-6 relative z-10">Experience the <br />new standard.</h2>
             <div className="flex flex-col sm:flex-row justify-center gap-8 relative z-10">
                <Button className="h-20 px-12 rounded-[28px] bg-white text-primary font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all">
                   BOOK CONSULTATION
                </Button>
-               <Button variant="outline" className="h-20 px-12 rounded-[28px] border-white/20 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-white/10 active:scale-95 transition-all">
+               <Button variant="outline" className="h-20 px-12 rounded-[28px] border-white/60 bg-white/10 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-white/20 active:scale-95 transition-all">
                   VIEW CASE STUDIES <ArrowRight className="ml-2 h-4 w-4" />
                </Button>
             </div>
          </div>
       </div>
+      </section>
     </div>
   );
 }
