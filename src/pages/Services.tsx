@@ -16,11 +16,28 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { SERVICES } from '@/src/constants';
+import { useCareStore } from '../stores/careStore';
+import nursingCareImg from '../assets/nursing-care.png';
+import physiotherapyImg from '../assets/physiotherapy.jpg';
+import elderlyAttendantImg from '../assets/elderly-attendant.jpg';
+import dementiaCareImg from '../assets/dementia-care.jpg';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 
+const serviceImages: Record<string, string> = {
+  'Nursing Care': nursingCareImg,
+  'Physiotherapy': physiotherapyImg,
+  'Elderly Attendant': elderlyAttendantImg,
+  'Dementia Care': dementiaCareImg,
+};
+
 export function ServicesPage() {
+  const { services, fetchServices, loading } = useCareStore();
+
+  React.useEffect(() => {
+    fetchServices();
+  }, []);
+
   return (
     <div className="bg-slate-50 min-h-screen selection:bg-primary/10 pb-12 space-y-12">
 
@@ -62,76 +79,92 @@ export function ServicesPage() {
         <section className="snap-start scroll-mt-12 px-4 sm:px-6 lg:px-8 pt-4 pb-24">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {SERVICES.map((service, index) => {
-                const Icon = {
-                  Stethoscope,
-                  Activity,
-                  UserPlus,
-                  Brain
-                }[service.icon] || Heart;
+              {loading ? (
+                Array(4).fill(0).map((_, i) => (
+                  <div key={i} className="space-y-6 animate-pulse p-6 rounded-[32px] border border-slate-100 bg-white">
+                    <div className="h-48 bg-slate-100 rounded-2xl"></div>
+                    <div className="h-6 w-3/4 bg-slate-100 rounded-full"></div>
+                    <div className="h-4 w-1/2 bg-slate-100 rounded-full"></div>
+                  </div>
+                ))
+              ) : services.length === 0 ? (
+                <div className="col-span-full py-16 text-center text-slate-400 font-bold">
+                  No service modalities configured.
+                </div>
+              ) : (
+                services.map((service, index) => {
+                  const Icon = {
+                    Stethoscope,
+                    Activity,
+                    UserPlus,
+                    Brain
+                  }[service.icon] || Heart;
 
-                return (
-                  <motion.div
-                    key={service.id}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1, duration: 0.8 }}
-                  >
-                    <Card className="rounded-3xl border-slate-100 shadow-xl hover:shadow-2xl transition-all h-full bg-white overflow-hidden flex flex-col">
-                      {service.image && (
+                  const image = serviceImages[service.title] || nursingCareImg;
+
+                  return (
+                    <motion.div
+                      key={service._id}
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1, duration: 0.8 }}
+                    >
+                      <Card className="rounded-3xl border-slate-100 shadow-xl hover:shadow-2xl transition-all h-full bg-white overflow-hidden flex flex-col">
                         <div className="w-full overflow-hidden relative shrink-0">
-                          <img src={service.image} alt={service.title} className="w-full aspect-[2/1] object-cover object-center transition-transform hover:scale-105 duration-700" />
+                          <img src={image} alt={service.title} className="w-full aspect-[2/1] object-cover object-center transition-transform hover:scale-105 duration-700" />
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/5 to-transparent pointer-events-none"></div>
                         </div>
-                      )}
-                      <div className="p-6 lg:p-8 flex flex-col h-full">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="w-12 h-12 bg-blue-50 text-primary rounded-xl flex items-center justify-center">
-                            <Icon size={24} />
+                        <div className="p-6 lg:p-8 flex flex-col h-full">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 bg-blue-50 text-primary rounded-xl flex items-center justify-center">
+                              <Icon size={24} />
+                            </div>
                           </div>
-                          <Badge className="bg-slate-50 text-slate-400 border-none px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                            {service.category}
-                          </Badge>
+                          
+                          <h3 className="text-xl font-bold text-slate-950 mb-2 tracking-tight">
+                            {service.title}
+                          </h3>
+                          
+                          <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
+                            {service.description}
+                          </p>
+                          
+                          <div className="space-y-3 mb-6 flex-grow">
+                            {service.features?.map((f: string, iKey: number) => (
+                              <div key={iKey} className="flex items-center gap-3">
+                                <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                                <p className="text-xs font-bold text-slate-700">{f}</p>
+                              </div>
+                            )) || (
+                              <>
+                                <div className="flex items-center gap-3">
+                                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                                  <p className="text-xs font-bold text-slate-700">Hospital-grade protocols</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                                  <p className="text-xs font-bold text-slate-700">Verified specialists</p>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          
+                          <div className="pt-4 border-t border-slate-50 flex items-center justify-between mt-auto">
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Price baseline</p>
+                              <p className="text-lg font-black text-slate-950">{service.priceRange}</p>
+                            </div>
+                            <Button className="h-10 px-6 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest" render={<Link to="/caregivers" />} nativeButton={false}>
+                              BOOK NOW <ArrowRight className="ml-2 w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
-                        
-                        <h3 className="text-xl font-bold text-slate-950 mb-2 tracking-tight">
-                          {service.title}
-                        </h3>
-                        
-                        <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
-                          {service.description}
-                        </p>
-                        
-                        <div className="space-y-3 mb-6 flex-grow">
-                          <div className="flex items-center gap-3">
-                            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                            <p className="text-xs font-bold text-slate-700">Hospital-grade protocols</p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                            <p className="text-xs font-bold text-slate-700">Verified specialists</p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                            <p className="text-xs font-bold text-slate-700">24/7 Clinical support</p>
-                          </div>
-                        </div>
-                        
-                        <div className="pt-4 border-t border-slate-50 flex items-center justify-between mt-auto">
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Starting from</p>
-                            <p className="text-lg font-black text-slate-950">${service.startingPrice}<span className="text-xs text-slate-400 ml-1">/hr</span></p>
-                          </div>
-                          <Button className="h-10 px-6 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest" render={<Link to="/caregivers" />} nativeButton={false}>
-                            BOOK NOW <ArrowRight className="ml-2 w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  </motion.div>
-                );
-              })}
+                      </Card>
+                    </motion.div>
+                  );
+                })
+              )}
             </div>
           </div>
         </section>

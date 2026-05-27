@@ -3,11 +3,13 @@ import { Link, useLocation } from 'react-router-dom';
 import { Heart, Menu, X, User, Phone, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/src/store';
+import { useCareStore } from '../../stores/careStore';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore();
+  const { resetStore } = useCareStore();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = React.useState(false);
 
@@ -102,7 +104,10 @@ export function Navbar() {
                     <Button 
                       variant="outline" 
                       className="rounded-2xl border-slate-200 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 px-6 h-12 font-bold text-xs uppercase tracking-widest text-slate-600 transition-all whitespace-nowrap" 
-                      onClick={() => logout()}
+                      onClick={() => {
+                        logout();
+                        resetStore();
+                      }}
                       nativeButton={true}
                     >
                       Logout
@@ -154,7 +159,10 @@ export function Navbar() {
                             <Button 
                               variant="outline" 
                               className="w-full h-16 rounded-2xl border-destructive/20 text-destructive hover:bg-destructive/10 font-bold uppercase tracking-widest text-xs" 
-                              onClick={() => logout()}
+                              onClick={() => {
+                                logout();
+                                resetStore();
+                              }}
                               nativeButton={true}
                             >
                                LOGOUT

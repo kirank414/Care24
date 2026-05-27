@@ -18,6 +18,7 @@ const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  role: z.enum(["user", "caregiver"] as const, { message: "Please select a role" }),
   confirmPassword: z.string()
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -48,7 +49,7 @@ export function SignupPage() {
         name: data.name,
         email: data.email,
         password: data.password,
-        role: 'user',
+        role: data.role,
       });
 
       const { _id, name, email, role: userRoleString, token } = response.data;
@@ -163,6 +164,22 @@ export function SignupPage() {
                   />
                 </div>
                 {errors.confirmPassword && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.confirmPassword.message}</p>}
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="role" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 pl-2">I want to join as</Label>
+                <div className="relative">
+                  <User className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 pointer-events-none" />
+                  <select 
+                    id="role"
+                    className="pl-16 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 outline-none text-slate-800"
+                    {...register('role')}
+                  >
+                    <option value="user">Patient or Family Member</option>
+                    <option value="caregiver">Professional Caregiver</option>
+                  </select>
+                </div>
+                {errors.role && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.role.message}</p>}
               </div>
 
               <Button type="submit" className="w-full h-20 rounded-[28px] font-black text-xs uppercase tracking-[0.35em] shadow-3xl shadow-blue-500/20 bg-slate-950 hover:bg-black text-white active:scale-95 transition-all" disabled={isSubmitting}>

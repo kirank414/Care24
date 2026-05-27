@@ -20,17 +20,8 @@ router.post("/signup", async (req, res) => {
   const { name, email, password, role } = req.body;
 
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(201).json({
-        _id: "mock_user_123",
-        name: name || email.split('@')[0],
-        email: email,
-        role: role || "user",
-        token: generateToken("mock_user_123"),
-      });
-    }
-
-    const userExists = await User.findOne({ email });
+    const safeEmail = email.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const userExists = await User.findOne({ email: { $regex: new RegExp(`^${safeEmail}$`, "i") } });
 
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
@@ -38,7 +29,7 @@ router.post("/signup", async (req, res) => {
 
     const user = await User.create({
       name,
-      email,
+      email: email.trim(),
       password,
       role: role || "user",
     });
@@ -66,17 +57,8 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.json({
-        _id: "mock_user_123",
-        name: email.split('@')[0],
-        email: email,
-        role: "user",
-        token: generateToken("mock_user_123"),
-      });
-    }
-
-    const user: any = await User.findOne({ email }).select("+password");
+    const safeEmail = email.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const user: any = await User.findOne({ email: { $regex: new RegExp(`^${safeEmail}$`, "i") } }).select("+password");
 
     if (user && (await user.matchPassword(password))) {
       res.json({

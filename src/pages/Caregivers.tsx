@@ -89,15 +89,44 @@ const CAREGIVERS = [
   }
 ];
 
+import { useCareStore } from '../stores/careStore';
+
 export function CaregiversPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [activeFilter, setActiveFilter] = React.useState('All');
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [selectedCity, setSelectedCity] = React.useState('All Cities');
+  const { caregivers, fetchCaregivers, loading } = useCareStore();
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
+    fetchCaregivers();
   }, []);
+
+  const availableCities = React.useMemo(() => {
+    const list = new Set<string>();
+    caregivers.forEach(cg => {
+      cg.cities?.forEach(c => list.add(c));
+    });
+    return ['All Cities', ...Array.from(list)];
+  }, [caregivers]);
+
+  const filteredCaregivers = caregivers.filter((cg) => {
+    const matchesSearch =
+      cg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cg.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cg.specialties?.some((s) => s.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesCity = selectedCity === 'All Cities' || 
+      cg.cities?.some(c => c.toLowerCase() === selectedCity.toLowerCase()) ||
+      ((!cg.cities || cg.cities.length === 0) && selectedCity.toLowerCase() === 'new york');
+
+    const matchesCategory = 
+      activeFilter === 'All' ||
+      (activeFilter === 'Critical Care' && cg.specialties?.some((s) => s.toLowerCase().includes('critical') || s.toLowerCase().includes('icu') || s.toLowerCase().includes('post-op'))) ||
+      (activeFilter === 'Physio' && cg.specialties?.some((s) => s.toLowerCase().includes('physio') || s.toLowerCase().includes('rehab'))) ||
+      (activeFilter === 'Memory Care' && cg.specialties?.some((s) => s.toLowerCase().includes('dementia') || s.toLowerCase().includes('alzheimer')));
+
+    return matchesSearch && matchesCity && matchesCategory;
+  });
 
   return (
     <div className="bg-slate-50 min-h-screen pb-12 space-y-12">
@@ -146,6 +175,19 @@ export function CaregiversPage() {
                   className="h-14 pl-12 pr-6 bg-white border-transparent rounded-[20px] text-base font-medium placeholder:text-slate-300 focus-visible:ring-4 focus-visible:ring-primary/5 shadow-inner"
                />
             </div>
+            <div className="relative w-full md:w-48 shrink-0">
+               <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+               <select 
+                  value={selectedCity}
+                  onChange={(e) => setSelectedCity(e.target.value)}
+                  className="w-full h-14 pl-12 pr-6 bg-white border-transparent rounded-[20px] text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary/5 shadow-inner appearance-none"
+               >
+                  {availableCities.map(city => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+               </select>
+               <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+            </div>
             <div className="flex items-center gap-1.5 w-full md:w-auto scroll-smooth overflow-x-auto no-scrollbar pb-1 md:pb-0 px-1 lg:px-0">
                {['All', 'Critical Care', 'Physio', 'Memory Care'].map((f) => (
                  <Button 
@@ -190,20 +232,24 @@ export function CaregiversPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <AnimatePresence mode="popLayout">
-            {isLoading ? (
+            {loading ? (
               // Enhanced Loading Skeletons
-              Array(8).fill(0).map((_, i) => (
-                <div key={i} className="space-y-6 animate-pulse p-4 rounded-[40px] border border-slate-100">
+              Array(4).fill(0).map((_, i) => (
+                <div key={i} className="space-y-6 animate-pulse p-4 rounded-[40px] border border-slate-100 bg-white">
                   <div className="h-64 bg-slate-100 rounded-[32px]"></div>
                   <div className="h-4 w-1/2 bg-slate-100 rounded-full mx-2"></div>
                   <div className="h-6 w-3/4 bg-slate-100 rounded-full mx-2"></div>
                   <div className="h-20 bg-slate-50 rounded-[24px]"></div>
                 </div>
               ))
+            ) : filteredCaregivers.length === 0 ? (
+              <div className="col-span-full py-16 text-center text-slate-400 font-bold">
+                No active or verified caregivers available.
+              </div>
             ) : (
-              CAREGIVERS.map((caregiver) => (
+              filteredCaregivers.map((caregiver) => (
                 <motion.div
-                  key={caregiver.id}
+                  key={caregiver._id}
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -214,7 +260,7 @@ export function CaregiversPage() {
                       {/* Image Area - Elite Polish */}
                       <div className="relative h-48 overflow-hidden rounded-[28px] mt-1 mx-1">
                          <img 
-                            src={caregiver.avatar} 
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${caregiver.name}`} 
                             alt={caregiver.name} 
                             className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                             referrerPolicy="no-referrer"
@@ -225,16 +271,15 @@ export function CaregiversPage() {
                                <Heart size={18} className="text-white hover:text-rose-500 transition-colors" />
                             </div>
                             <div className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-2 border shadow-lg ${
-                               caregiver.status === 'online' ? 'bg-emerald-500/90 border-emerald-400 text-white' :
-                               caregiver.status === 'busy' ? 'bg-amber-500/90 border-amber-400 text-white' :
+                               caregiver.availability ? 'bg-emerald-500/90 border-emerald-400 text-white' :
                                'bg-slate-500/90 border-slate-400 text-white'
                             }`}>
-                               <div className={`w-1.5 h-1.5 rounded-full ${caregiver.status === 'online' ? 'bg-white animate-pulse' : 'bg-white/50'}`}></div>
-                               {caregiver.availability}
+                               <div className={`w-1.5 h-1.5 rounded-full ${caregiver.availability ? 'bg-white animate-pulse' : 'bg-white/50'}`}></div>
+                               {caregiver.availability ? 'Available' : 'Busy'}
                             </div>
                          </div>
                          
-                         {caregiver.verified && (
+                         {caregiver.isVerified && (
                             <div className="absolute bottom-5 left-5">
                                <Badge className="bg-white/95 backdrop-blur-md text-slate-950 border-none shadow-xl px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.25em] rounded-full">
                                   <ShieldCheck size={12} className="mr-2 text-primary" /> ELITE VERIFIED 
@@ -248,49 +293,37 @@ export function CaregiversPage() {
                          <div className="flex items-center gap-2 mb-4">
                             <div className="flex -space-x-1">
                                {[1, 2, 3, 4, 5].map(s => (
-                                 <Star key={s} size={12} className={s <= Math.floor(caregiver.rating) ? "fill-yellow-400 text-yellow-500" : "text-slate-200"} />
+                                 <Star key={s} size={12} className={s <= Math.floor(caregiver.rating || 5.0) ? "fill-yellow-400 text-yellow-500" : "text-slate-200"} />
                                ))}
                             </div>
-                            <span className="text-xs font-bold text-slate-900 ml-1">{caregiver.rating}</span>
-                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-2">({caregiver.reviews} Reviews)</span>
+                            <span className="text-xs font-bold text-slate-900 ml-1">{caregiver.rating || 5.0}</span>
                          </div>
 
                          <h3 className="text-xl font-bold text-slate-950 mb-1 tracking-tight">{caregiver.name}</h3>
                          <div className="flex flex-wrap gap-1.5 mb-6">
-                            {caregiver.specialty.split('&').map((tag, idx) => (
+                            {caregiver.specialties?.map((tag, idx) => (
                               <Badge key={idx} variant="secondary" className="bg-primary/5 text-primary border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
                                  {tag.trim()}
                               </Badge>
                             ))}
                          </div>
+                         <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-4 pl-1">
+                            <MapPin size={12} className="text-slate-300" />
+                            <span>Serves: {caregiver.cities?.join(', ') || 'New York'}</span>
+                         </div>
 
                          <div className="grid grid-cols-2 gap-2 mb-4">
                             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5 focus:">Exp.</p>
-                               <p className="text-xs font-black text-slate-950">{caregiver.experience}</p>
+                               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Exp.</p>
+                               <p className="text-xs font-black text-slate-950">{caregiver.experienceYears} Years</p>
                             </div>
                             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Loc.</p>
-                               <p className="text-xs font-black text-slate-950">{caregiver.location.split(',')[0]}</p>
+                               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Rate</p>
+                               <p className="text-xs font-black text-slate-950">${caregiver.hourlyRate}/Hr</p>
                             </div>
                          </div>
 
-                         <div className="space-y-2 mb-6">
-                            <div>
-                               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Clinical Stack</p>
-                               <div className="flex flex-wrap gap-1.5">
-                                  {caregiver.certifications.map(cert => (
-                                    <Badge key={cert} variant="outline" className="text-[9px] border-slate-100 text-slate-500 bg-white font-bold h-6">
-                                       {cert}
-                                    </Badge>
-                                  ))}
-                               </div>
-                            </div>
-                            <div>
-                               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Linguistic Proficiency</p>
-                               <p className="text-[10px] font-medium text-slate-600 px-1">{caregiver.languages.join(' • ')}</p>
-                            </div>
-                         </div>
+                         <p className="text-slate-500 text-[11px] font-medium leading-relaxed mb-6 line-clamp-3 bg-slate-50 p-3 rounded-xl border border-slate-100">{caregiver.bio}</p>
 
                          <Button className="w-full h-14 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl group/btn active:scale-95 transition-all">
                             BOOK CONSULTATION <ArrowRight size={14} className="ml-3 group-hover/btn:translate-x-1 transition-transform" />

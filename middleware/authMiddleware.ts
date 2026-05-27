@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../models/User.js"; // Note: .js extension for ES modules if needed, or tsx handles it
 
 interface AuthRequest extends Request {
@@ -22,7 +23,14 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "care24_super_secret_key_123");
 
       // Get user from the token
+      if (!mongoose.Types.ObjectId.isValid(decoded.id)) {
+        return res.status(401).json({ message: "Not authorized, invalid token payload" });
+      }
+
       req.user = await User.findById(decoded.id).select("-password");
+      if (!req.user) {
+        return res.status(401).json({ message: "Not authorized, user not found" });
+      }
 
       next();
     } catch (error) {

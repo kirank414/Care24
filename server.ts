@@ -5,6 +5,13 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { connectDB } from "./lib/db.js";
 import authRoutes from "./routes/authRoutes.js";
+import patientRoutes from "./routes/patientRoutes.js";
+import caregiverRoutes from "./routes/caregiverRoutes.js";
+import serviceRoutes from "./routes/serviceRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
+import careNoteRoutes from "./routes/careNoteRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import complaintRoutes from "./routes/complaintRoutes.js";
 
 dotenv.config();
 
@@ -22,18 +29,16 @@ async function startServer() {
 
   // API Routes
   app.use("/api/auth", authRoutes);
+  app.use("/api/patients", patientRoutes);
+  app.use("/api/caregivers", caregiverRoutes);
+  app.use("/api/services", serviceRoutes);
+  app.use("/api/bookings", bookingRoutes);
+  app.use("/api/notes", careNoteRoutes);
+  app.use("/api/notifications", notificationRoutes);
+  app.use("/api/complaints", complaintRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", message: "Care24 API is operational" });
-  });
-
-  // Mock endpoints for Care24
-  app.get("/api/services", (req, res) => {
-    res.json([
-      { id: 1, title: "Nursing Care", description: "Professional medical care at home.", price: "From $50/visit", icon: "stethosope" },
-      { id: 2, title: "Physiotherapy", description: "Restoring mobility and strength.", price: "From $45/session", icon: "activity" },
-      { id: 3, title: "Elderly Attendant", description: "Daily assistance and companionship.", price: "From $30/day", icon: "heart" },
-    ]);
   });
 
   // Vite middleware for development

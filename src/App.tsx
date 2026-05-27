@@ -31,6 +31,9 @@ const ComingSoon = ({ title }: { title: string }) => (
 );
 
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { SetupPatientProfilePage } from './pages/SetupPatientProfile';
+import { SetupCaregiverProfilePage } from './pages/SetupCaregiverProfile';
+import { ProfileGuard } from './components/ProfileGuard';
 
 export default function App() {
   return (
@@ -46,12 +49,32 @@ export default function App() {
           <Route path="login" element={<LoginPage />} />
           <Route path="signup" element={<SignupPage />} />
           
+          {/* Onboarding Profiles */}
+          <Route 
+            path="setup-patient-profile" 
+            element={
+              <ProtectedRoute allowedRoles={['USER']}>
+                <SetupPatientProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="setup-caregiver-profile" 
+            element={
+              <ProtectedRoute allowedRoles={['CAREGIVER']}>
+                <SetupCaregiverProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          
           {/* Protected Dashboards */}
           <Route 
             path="dashboard" 
             element={
               <ProtectedRoute allowedRoles={['USER']}>
-                <UserDashboard />
+                <ProfileGuard>
+                  <UserDashboard />
+                </ProfileGuard>
               </ProtectedRoute>
             } 
           />
@@ -59,7 +82,9 @@ export default function App() {
             path="dashboard/caregiver" 
             element={
               <ProtectedRoute allowedRoles={['CAREGIVER']}>
-                <CaregiverDashboard />
+                <ProfileGuard>
+                  <CaregiverDashboard />
+                </ProfileGuard>
               </ProtectedRoute>
             } 
           />
