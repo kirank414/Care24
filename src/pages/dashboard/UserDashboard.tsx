@@ -167,9 +167,24 @@ export function UserDashboard() {
     e.preventDefault();
     if (!selectedService || !selectedCaregiver || !startDate || !endDate) return;
 
-    const srv = services.find(s => s._id === selectedService);
     const cg = caregivers.find(c => c._id === selectedCaregiver);
     const rate = cg?.hourlyRate || 45;
+
+    // Location-based validation: block booking if caregiver doesn't serve patient's area
+    if (patient?.address && cg) {
+      const patientArea = patient.address.toLowerCase();
+      const cgCities: string[] = cg.cities && cg.cities.length > 0
+        ? cg.cities.map((city: string) => city.toLowerCase())
+        : [];
+      const isServed = cgCities.length > 0
+        ? cgCities.some(city => patientArea.includes(city) || city.includes(patientArea.split(',')[0].trim()))
+        : false;
+      if (!isServed) {
+        toast.error(`${cg.name || 'This caregiver'} does not serve your area (${patient.address}). Please select a caregiver available in your location.`);
+        setSelectedCaregiver('');
+        return;
+      }
+    }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -1049,7 +1064,30 @@ export function UserDashboard() {
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Select Preferred Caregiver</label>
                     <select 
                       value={selectedCaregiver} 
-                      onChange={(e) => setSelectedCaregiver(e.target.value)} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) {
+                          setSelectedCaregiver('');
+                          return;
+                        }
+                        const cg = caregivers.find(c => c._id === val);
+                        if (cg && patient && patient.address) {
+                          const patientAddr = patient.address.toLowerCase();
+                          const cgCities = cg.cities || [];
+                          const isMatchingLoc = cgCities.length === 0
+                            ? (patientAddr.includes('new york') || patientAddr.includes('ny'))
+                            : cgCities.some(city => 
+                                patientAddr.includes(city.toLowerCase().trim()) ||
+                                city.toLowerCase().trim().includes(patientAddr)
+                              );
+                          if (!isMatchingLoc) {
+                            toast.error(`${cg.name} does not serve your location!`);
+                            setSelectedCaregiver('');
+                            return;
+                          }
+                        }
+                        setSelectedCaregiver(val);
+                      }} 
                       required 
                       className="w-full h-14 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
                     >
