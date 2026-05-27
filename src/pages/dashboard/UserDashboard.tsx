@@ -1055,21 +1055,30 @@ export function UserDashboard() {
                     >
                       <option value="">-- Select Caregiver --</option>
                       {caregivers
-                        .filter(cg => {
-                          if (!cg.isVerified) return false;
-                          if (!patient || !patient.address) return true;
-                          const patientAddr = patient.address.toLowerCase();
-                          if (!cg.cities || cg.cities.length === 0) {
-                            return patientAddr.includes('new york') || patientAddr.includes('ny');
+                        .filter(cg => cg.isVerified)
+                        .map(cg => {
+                          let isMatchingLoc = true;
+                          if (patient && patient.address) {
+                            const patientAddr = patient.address.toLowerCase();
+                            if (!cg.cities || cg.cities.length === 0) {
+                              isMatchingLoc = patientAddr.includes('new york') || patientAddr.includes('ny');
+                            } else {
+                              isMatchingLoc = cg.cities.some(city => 
+                                patientAddr.includes(city.toLowerCase().trim()) ||
+                                city.toLowerCase().trim().includes(patientAddr)
+                              );
+                            }
                           }
-                          return cg.cities.some(city => 
-                            patientAddr.includes(city.toLowerCase().trim()) ||
-                            city.toLowerCase().trim().includes(patientAddr)
+                          return (
+                            <option 
+                              key={cg._id} 
+                              value={cg._id} 
+                              disabled={!isMatchingLoc}
+                            >
+                              {cg.name} - {cg.title} {!isMatchingLoc ? "(Not serving your area)" : ""}
+                            </option>
                           );
-                        })
-                        .map(cg => (
-                          <option key={cg._id} value={cg._id}>{cg.name} - {cg.title}</option>
-                        ))}
+                        })}
                     </select>
                   </div>
 
