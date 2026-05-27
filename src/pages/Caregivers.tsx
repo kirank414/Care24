@@ -90,16 +90,21 @@ const CAREGIVERS = [
 ];
 
 import { useCareStore } from '../stores/careStore';
+import { useAuthStore } from '../store';
 
 export function CaregiversPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [activeFilter, setActiveFilter] = React.useState('All');
   const [selectedCity, setSelectedCity] = React.useState('All Cities');
-  const { caregivers, fetchCaregivers, loading } = useCareStore();
+  const { caregivers, fetchCaregivers, loading, patient, fetchPatientMe } = useCareStore();
+  const { role, isAuthenticated } = useAuthStore();
 
   React.useEffect(() => {
     fetchCaregivers();
-  }, []);
+    if (isAuthenticated && role === 'USER') {
+      fetchPatientMe();
+    }
+  }, [isAuthenticated, role]);
 
   const availableCities = React.useMemo(() => {
     const list = new Set<string>();
@@ -110,6 +115,18 @@ export function CaregiversPage() {
   }, [caregivers]);
 
   const filteredCaregivers = caregivers.filter((cg) => {
+    if (isAuthenticated && role === 'USER' && patient?.address) {
+      const patientAddr = patient.address.toLowerCase();
+      const cgCities = cg.cities || [];
+      const matchesPatientLoc = cgCities.length === 0 
+        ? (patientAddr.includes('new york') || patientAddr.includes('ny'))
+        : cgCities.some(city => 
+            patientAddr.includes(city.toLowerCase().trim()) ||
+            city.toLowerCase().trim().includes(patientAddr)
+          );
+      if (!matchesPatientLoc) return false;
+    }
+
     const matchesSearch =
       cg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cg.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -266,66 +283,83 @@ export function CaregiversPage() {
                             referrerPolicy="no-referrer"
                          />
                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60"></div>
-                         <div className="absolute top-5 right-5 flex flex-col gap-2 items-end">
-                            <div className="frosted-glass p-2.5 rounded-2xl shadow-xl border border-white/30 hover:scale-110 transition-transform">
-                               <Heart size={18} className="text-white hover:text-rose-500 transition-colors" />
-                            </div>
-                            <div className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-2 border shadow-lg ${
-                               caregiver.availability ? 'bg-emerald-500/90 border-emerald-400 text-white' :
-                               'bg-slate-500/90 border-slate-400 text-white'
-                            }`}>
-                               <div className={`w-1.5 h-1.5 rounded-full ${caregiver.availability ? 'bg-white animate-pulse' : 'bg-white/50'}`}></div>
-                               {caregiver.availability ? 'Available' : 'Busy'}
-                            </div>
-                         </div>
-                         
-                         {caregiver.isVerified && (
-                            <div className="absolute bottom-5 left-5">
-                               <Badge className="bg-white/95 backdrop-blur-md text-slate-950 border-none shadow-xl px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.25em] rounded-full">
-                                  <ShieldCheck size={12} className="mr-2 text-primary" /> ELITE VERIFIED 
-                               </Badge>
-                            </div>
+                         {!(isAuthenticated && role === 'USER') && (
+                           <>
+                             <div className="absolute top-5 right-5 flex flex-col gap-2 items-end">
+                                <div className="frosted-glass p-2.5 rounded-2xl shadow-xl border border-white/30 hover:scale-110 transition-transform">
+                                   <Heart size={18} className="text-white hover:text-rose-500 transition-colors" />
+                                </div>
+                                <div className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-2 border shadow-lg ${
+                                   caregiver.availability ? 'bg-emerald-500/90 border-emerald-400 text-white' :
+                                   'bg-slate-500/90 border-slate-400 text-white'
+                                }`}>
+                                   <div className={`w-1.5 h-1.5 rounded-full ${caregiver.availability ? 'bg-white animate-pulse' : 'bg-white/50'}`}></div>
+                                   {caregiver.availability ? 'Available' : 'Busy'}
+                                </div>
+                             </div>
+                             
+                             {caregiver.isVerified && (
+                                <div className="absolute bottom-5 left-5">
+                                   <Badge className="bg-white/95 backdrop-blur-md text-slate-950 border-none shadow-xl px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.25em] rounded-full">
+                                      <ShieldCheck size={12} className="mr-2 text-primary" /> ELITE VERIFIED 
+                                   </Badge>
+                                </div>
+                             )}
+                           </>
                          )}
                       </div>
 
                       {/* Content Area - Refined Spacing */}
-                      <div className="p-4 pb-6">
-                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex -space-x-1">
-                               {[1, 2, 3, 4, 5].map(s => (
-                                 <Star key={s} size={12} className={s <= Math.floor(caregiver.rating || 5.0) ? "fill-yellow-400 text-yellow-500" : "text-slate-200"} />
-                               ))}
-                            </div>
-                            <span className="text-xs font-bold text-slate-900 ml-1">{caregiver.rating || 5.0}</span>
+                      <div className="p-4 pb-6 flex-grow flex flex-col justify-between">
+                         <div>
+                           {!(isAuthenticated && role === 'USER') && (
+                             <div className="flex items-center gap-2 mb-4">
+                                <div className="flex -space-x-1">
+                                   {[1, 2, 3, 4, 5].map(s => (
+                                     <Star key={s} size={12} className={s <= Math.floor(caregiver.rating || 5.0) ? "fill-yellow-400 text-yellow-500" : "text-slate-200"} />
+                                   ))}
+                                </div>
+                                <span className="text-xs font-bold text-slate-900 ml-1">{caregiver.rating || 5.0}</span>
+                             </div>
+                           )}
+
+                           <h3 className="text-xl font-bold text-slate-950 mb-1 tracking-tight">{caregiver.name}</h3>
+                           <div className="flex flex-wrap gap-1.5 mb-6">
+                              {caregiver.specialties?.map((tag, idx) => (
+                                <Badge key={idx} variant="secondary" className="bg-primary/5 text-primary border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
+                                   {tag.trim()}
+                                </Badge>
+                              ))}
+                           </div>
+                           <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-4 pl-1">
+                              <MapPin size={12} className="text-slate-300" />
+                              <span>Serves: {caregiver.cities?.join(', ') || 'New York'}</span>
+                           </div>
+
+                           {!(isAuthenticated && role === 'USER') && (
+                             <>
+                               <div className="grid grid-cols-2 gap-2 mb-4">
+                                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                     <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Exp.</p>
+                                     <p className="text-xs font-black text-slate-950">{caregiver.experienceYears} Years</p>
+                                  </div>
+                                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                     <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Rate</p>
+                                     <p className="text-xs font-black text-slate-950">${caregiver.hourlyRate}/Hr</p>
+                                  </div>
+                               </div>
+
+                               <p className="text-slate-500 text-[11px] font-medium leading-relaxed mb-6 line-clamp-3 bg-slate-50 p-3 rounded-xl border border-slate-100">{caregiver.bio}</p>
+                             </>
+                           )}
                          </div>
 
-                         <h3 className="text-xl font-bold text-slate-950 mb-1 tracking-tight">{caregiver.name}</h3>
-                         <div className="flex flex-wrap gap-1.5 mb-6">
-                            {caregiver.specialties?.map((tag, idx) => (
-                              <Badge key={idx} variant="secondary" className="bg-primary/5 text-primary border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
-                                 {tag.trim()}
-                              </Badge>
-                            ))}
-                         </div>
-                         <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-4 pl-1">
-                            <MapPin size={12} className="text-slate-300" />
-                            <span>Serves: {caregiver.cities?.join(', ') || 'New York'}</span>
-                         </div>
-
-                         <div className="grid grid-cols-2 gap-2 mb-4">
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Exp.</p>
-                               <p className="text-xs font-black text-slate-950">{caregiver.experienceYears} Years</p>
-                            </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Rate</p>
-                               <p className="text-xs font-black text-slate-950">${caregiver.hourlyRate}/Hr</p>
-                            </div>
-                         </div>
-
-                         <p className="text-slate-500 text-[11px] font-medium leading-relaxed mb-6 line-clamp-3 bg-slate-50 p-3 rounded-xl border border-slate-100">{caregiver.bio}</p>
-
-                         <Button className="w-full h-14 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl group/btn active:scale-95 transition-all">
+                         <Button 
+                           onClick={() => {
+                             window.location.href = '/dashboard';
+                           }}
+                           className="w-full h-14 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl group/btn active:scale-95 transition-all mt-auto"
+                         >
                             BOOK CONSULTATION <ArrowRight size={14} className="ml-3 group-hover/btn:translate-x-1 transition-transform" />
                          </Button>
                       </div>

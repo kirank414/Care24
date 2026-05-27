@@ -1054,9 +1054,22 @@ export function UserDashboard() {
                       className="w-full h-14 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
                     >
                       <option value="">-- Select Caregiver --</option>
-                      {caregivers.filter(cg => cg.isVerified).map(cg => (
-                        <option key={cg._id} value={cg._id}>{cg.name} ({cg.title} - ${cg.hourlyRate}/hr)</option>
-                      ))}
+                      {caregivers
+                        .filter(cg => {
+                          if (!cg.isVerified) return false;
+                          if (!patient || !patient.address) return true;
+                          const patientAddr = patient.address.toLowerCase();
+                          if (!cg.cities || cg.cities.length === 0) {
+                            return patientAddr.includes('new york') || patientAddr.includes('ny');
+                          }
+                          return cg.cities.some(city => 
+                            patientAddr.includes(city.toLowerCase().trim()) ||
+                            city.toLowerCase().trim().includes(patientAddr)
+                          );
+                        })
+                        .map(cg => (
+                          <option key={cg._id} value={cg._id}>{cg.name} - {cg.title}</option>
+                        ))}
                     </select>
                   </div>
 
