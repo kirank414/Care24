@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
@@ -18,7 +19,8 @@ import {
   AlertCircle,
   ChevronDown,
   UserCheck,
-  Users
+  Users,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,7 +32,7 @@ const CAREGIVERS = [
   {
     id: 'C-101',
     name: 'Nurse Priya Sharma',
-    specialty: 'ICU Specialist & Critical Care',
+    specialty: 'Senior Care Specialist',
     experience: '8+ Years',
     rating: 4.9,
     reviews: 124,
@@ -91,10 +93,14 @@ const CAREGIVERS = [
 
 import { useCareStore } from '../stores/careStore';
 import { useAuthStore } from '../store';
+import { useSearchParams } from 'react-router-dom';
 
 export function CaregiversPage() {
+  const [searchParams] = useSearchParams();
+  const defaultCategory = searchParams.get('category') || 'All';
+  
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [activeFilter, setActiveFilter] = React.useState('All');
+  const [activeFilter, setActiveFilter] = React.useState(defaultCategory);
   const [selectedCity, setSelectedCity] = React.useState('All Cities');
   const { caregivers, fetchCaregivers, loading, patient, fetchPatientMe } = useCareStore();
   const { role, isAuthenticated } = useAuthStore();
@@ -127,9 +133,7 @@ export function CaregiversPage() {
 
     const matchesCategory = 
       activeFilter === 'All' ||
-      (activeFilter === 'Critical Care' && cg.specialties?.some((s) => s.toLowerCase().includes('critical') || s.toLowerCase().includes('icu') || s.toLowerCase().includes('post-op'))) ||
-      (activeFilter === 'Physio' && cg.specialties?.some((s) => s.toLowerCase().includes('physio') || s.toLowerCase().includes('rehab'))) ||
-      (activeFilter === 'Memory Care' && cg.specialties?.some((s) => s.toLowerCase().includes('dementia') || s.toLowerCase().includes('alzheimer')));
+      cg.specialties?.some((s) => s.toLowerCase() === activeFilter.toLowerCase());
 
     return matchesSearch && matchesCity && matchesCategory;
   });
@@ -150,22 +154,22 @@ export function CaregiversPage() {
         <div className="w-full px-4 sm:px-10">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-8">
             <div className="w-full">
-              <Badge className="bg-primary/5 text-primary border-primary/20 px-4 py-2 mb-8 text-[10px] font-bold uppercase tracking-[0.3em] rounded-full">Medical Network Protocol</Badge>
+              <Badge className="bg-primary/5 text-primary border-primary/20 px-4 py-2 mb-8 text-[10px] font-bold uppercase tracking-[0.3em] rounded-full">Verified Caregiver Network</Badge>
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-slate-950 tracking-tight leading-[0.9] mb-8">
-                Verified experts <br /><span className="text-slate-400 italic font-medium">on demand.</span>
+                Compassionate care <br /><span className="text-slate-400 italic font-medium">when you need it.</span>
               </h1>
               <p className="text-lg text-slate-500 font-medium w-full leading-relaxed">
-                Every expert on Care24 is vetted through our 7-step clinical verification loop, ensuring the highest standard of ICU and geriatric care.
+                Every professional on Care24 is thoroughly vetted through our verification process, ensuring the highest standard of compassionate home care.
               </p>
             </div>
             <div className="flex items-center gap-10 pb-2">
                <div className="text-center px-8 border-r border-slate-100">
-                 <p className="text-3xl font-black text-slate-900 tracking-tighter">14k+</p>
-                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">ACTIVE RNs</p>
+                 <p className="text-3xl font-black text-slate-900 tracking-tighter">1,200+</p>
+                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">VERIFIED EXPERTS</p>
                </div>
                <div className="text-center">
-                 <p className="text-3xl font-black text-emerald-600 tracking-tighter">99.8%</p>
-                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">SAFETY SCORE</p>
+                 <p className="text-3xl font-black text-emerald-600 tracking-tighter">98%</p>
+                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">SATISFACTION SCORE</p>
                </div>
             </div>
           </div>
@@ -195,7 +199,7 @@ export function CaregiversPage() {
                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
             </div>
             <div className="flex items-center gap-1.5 w-full md:w-auto scroll-smooth overflow-x-auto no-scrollbar pb-1 md:pb-0 px-1 lg:px-0">
-               {['All', 'Critical Care', 'Physio', 'Memory Care'].map((f) => (
+               {['All', 'Nursing Care', 'Physiotherapy', 'Elderly Attendant', 'Post-hospital Care'].map((f) => (
                  <Button 
                   key={f}
                   variant={activeFilter === f ? 'default' : 'ghost'}
@@ -210,30 +214,8 @@ export function CaregiversPage() {
         </div>
       </section>
 
-      {/* Warmth Section - Patient Snippets */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-              {[
-                { quote: "Nurse Sarah didn't just manage the ICU equipment; she brought a sense of calm that helped our father heal faster than we expected.", author: "Jameson Family", role: "Neuro-Rehab Patient" },
-                { quote: "The level of professionalism is matched only by the deep empathy these caregivers show every single day.", author: "Dr. Elena Chen", role: "Primary Care Physician" },
-                { quote: "For the first time in months, I felt like my mother was in safe, compassionate hands. They truly care about the person, not just the patient.", author: "Michael R.", role: "Family Member" }
-              ].map((s, i) => (
-                <div key={i} className="space-y-6">
-                   <div className="text-primary/40"><Heart size={32} className="mx-auto" /></div>
-                   <p className="text-lg font-medium text-slate-700 italic leading-relaxed">"{s.quote}"</p>
-                   <div>
-                      <p className="text-sm font-black text-slate-950 uppercase tracking-widest">{s.author}</p>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{s.role}</p>
-                   </div>
-                </div>
-              ))}
-           </div>
-        </div>
-      </section>
-
       {/* Caregiver Grid Section */}
-      <section className="h-full snap-start scroll-mt-12 flex items-center justify-center overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-inner bg-slate-50 pt-4 pb-20">
+      <section className="h-full snap-start scroll-mt-12 flex items-center justify-center overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-inner bg-slate-50 pt-0 pb-20">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -278,13 +260,18 @@ export function CaregiversPage() {
                     <Card className={`enterprise-card group h-full overflow-hidden border-transparent shadow-sm hover:shadow-3xl bg-white p-2 ${!isMatchingLoc ? "pointer-events-none" : ""}`}>
                       <CardContent className="p-0 flex flex-col h-full bg-white rounded-[30px]">
                         {/* Image Area - Elite Polish */}
-                        <div className="relative h-48 overflow-hidden rounded-[28px] mt-1 mx-1">
-                           <img 
-                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${caregiver.name}`} 
-                              alt={caregiver.name} 
-                              className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                              referrerPolicy="no-referrer"
-                           />
+                        <div className="relative h-48 overflow-hidden rounded-[28px] mt-1 mx-1 bg-slate-100">
+                           {caregiver.imageUrl ? (
+                             <img 
+                               src={caregiver.imageUrl} 
+                               alt={caregiver.name} 
+                               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                             />
+                           ) : (
+                             <div className="w-full h-full flex items-center justify-center text-slate-300">
+                               <User size={64} />
+                             </div>
+                           )}
                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60"></div>
                            {!(isAuthenticated && role === 'USER') && (
                              <>
@@ -387,21 +374,21 @@ export function CaregiversPage() {
            <div className="absolute top-0 right-0 w-2/3 h-full bg-primary/5 rounded-full blur-[160px] group-hover:scale-125 transition-transform duration-1000 opacity-50"></div>
            <div className="relative p-16 lg:p-24 flex flex-col lg:flex-row items-center justify-between gap-16">
               <div className="max-w-2xl">
-                 <Badge className="bg-white/10 text-white border-white/10 px-5 py-2 rounded-full mb-10 text-[10px] font-black uppercase tracking-[0.3em]">Institutional Protocol</Badge>
-                 <h2 className="text-4xl md:text-6xl font-bold text-white tracking-[-0.05em] leading-[0.95] mb-10">Institutional grade <br /><span className="text-primary italic font-medium">Care Matchmaking.</span></h2>
+                 <Badge className="bg-white/10 text-white border-white/10 px-5 py-2 rounded-full mb-10 text-[10px] font-black uppercase tracking-[0.3em]">Family Protection</Badge>
+                 <h2 className="text-4xl md:text-6xl font-bold text-white tracking-[-0.05em] leading-[0.95] mb-10">Personalized <br /><span className="text-primary italic font-medium">Care Matchmaking.</span></h2>
                  <p className="text-xl text-slate-400 font-medium leading-relaxed max-w-xl mb-12">
-                   Contact our clinical directors for a custom-mapped recovery plan, including ICU step-down and comprehensive geri-atric protocol design.
+                   Contact our care coordinators for a personalized home care plan tailored precisely for your family's unique needs.
                  </p>
                  <div className="flex flex-col sm:flex-row items-center gap-8">
-                    <Button size="lg" className="w-full sm:w-auto h-20 px-12 rounded-[24px] bg-white text-slate-950 hover:bg-slate-50 font-black text-lg shadow-2xl">
-                       TALK TO A DIRECTOR
-                    </Button>
+                     <Button size="lg" className="w-full sm:w-auto h-20 px-12 rounded-[24px] bg-white text-slate-950 hover:bg-slate-50 font-black text-lg shadow-2xl" render={<Link to="/contact" />} nativeButton={false}>
+                        TALK TO A CARE COORDINATOR
+                     </Button>
                     <div className="flex items-center gap-4 text-white">
                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary shadow-xl">
                           <CheckCircle2 size={24} />
                        </div>
                        <div className="text-left leading-none">
-                          <p className="text-sm font-bold">HIPAA Compliant</p>
+                          <p className="text-sm font-bold">Trusted Platform</p>
                           <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1">SECURE NETWORK</p>
                        </div>
                     </div>
@@ -410,10 +397,10 @@ export function CaregiversPage() {
               <div className="relative lg:w-1/3 hidden lg:block">
                  <div className="grid grid-cols-2 gap-4">
                     {[
-                      { icon: Stethoscope, label: 'CLINICAL' },
+                      { icon: Stethoscope, label: 'SUPPORTIVE' },
                       { icon: ShieldCheck, label: 'VETTED' },
                       { icon: Users, label: 'TRUSTED' },
-                      { icon: Award, label: 'ELITE' }
+                      { icon: Award, label: 'COMPASSIONATE' }
                     ].map((idx, i) => (
                       <div key={i} className="aspect-square rounded-[32px] bg-white/5 border border-white/10 p-8 flex flex-col justify-center text-center transition-transform hover:scale-105 duration-500">
                          <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white mx-auto mb-4 group-hover:rotate-6 transition-transform">

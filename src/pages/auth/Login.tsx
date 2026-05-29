@@ -58,7 +58,7 @@ export function LoginPage() {
       const destination = location.state?.from?.pathname || (uppercaseRole === 'ADMIN' ? '/dashboard/admin' : uppercaseRole === 'CAREGIVER' ? '/dashboard/caregiver' : '/dashboard');
       navigate(destination, { replace: true });
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Authentication failure. Check clinical credentials.';
+      const message = error.response?.data?.message || 'Authentication failure. Check account credentials.';
       toast.error(message);
     }
   };
@@ -117,7 +117,7 @@ export function LoginPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-2">
                   <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Password</Label>
-                  <Link to="#" className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest">
+                  <Link to="#" onClick={(e) => { e.preventDefault(); import('react-hot-toast').then(m => m.default.error('Password recovery is currently unavailable.')); }} className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest">
                     Forgot Password?
                   </Link>
                 </div>

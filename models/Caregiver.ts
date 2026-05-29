@@ -15,6 +15,9 @@ const caregiverSchema = new mongoose.Schema(
       type: String,
       required: [true, "Please add professional title (e.g., Elite RN)"],
     },
+    imageUrl: {
+      type: String,
+    },
     experienceYears: {
       type: Number,
       required: [true, "Please add years of experience"],
@@ -59,6 +62,44 @@ const caregiverSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+caregiverSchema.post("save", async function () {
+  await updateServicePrices();
+});
+
+caregiverSchema.post("findOneAndUpdate", async function () {
+  await updateServicePrices();
+});
+
+caregiverSchema.post("findOneAndDelete", async function () {
+  await updateServicePrices();
+});
+
+async function updateServicePrices() {
+  try {
+    const ServiceCategory = mongoose.model("ServiceCategory");
+    const Caregiver = mongoose.model("Caregiver");
+    
+    const services = await ServiceCategory.find({}) as any[];
+    for (const service of services) {
+      // Find all verified caregivers that have this service as a specialty
+      const caregivers = await Caregiver.find({ 
+        isVerified: true, 
+        specialties: { $regex: new RegExp(service.title, "i") } 
+      }) as any[];
+      
+      if (caregivers.length > 0) {
+        const minPrice = Math.min(...caregivers.map(cg => cg.hourlyRate || 9999));
+        if (minPrice !== 9999 && minPrice !== Infinity) {
+          service.priceRange = "From $" + minPrice + "/hr";
+          await service.save();
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error dynamically updating service prices:", error);
+  }
+}
 
 const Caregiver = (mongoose.models.Caregiver || mongoose.model("Caregiver", caregiverSchema)) as any;
 

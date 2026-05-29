@@ -15,6 +15,9 @@ const patientSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Please add patient age"],
     },
+    imageUrl: {
+      type: String,
+    },
     gender: {
       type: String,
       enum: ["Male", "Female", "Other"],

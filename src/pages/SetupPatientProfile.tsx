@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import { useCareStore } from '../stores/careStore';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ export function SetupPatientProfilePage() {
 
   const [form, setForm] = useState({
     name: '',
+    imageUrl: '',
     age: '',
     gender: 'Male',
     bloodGroup: '',
@@ -77,6 +79,7 @@ export function SetupPatientProfilePage() {
 
     const payload = {
       name: form.name.trim(),
+      imageUrl: form.imageUrl.trim(),
       age: ageNum,
       gender: form.gender,
       bloodGroup: cleanBloodGroup,
@@ -126,7 +129,7 @@ export function SetupPatientProfilePage() {
             </div>
             <span className="text-3xl font-black tracking-tighter text-slate-900">Care<span className="text-primary">24</span></span>
           </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Configure Clinical Profile</h1>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Configure Care Profile</h1>
           <p className="text-slate-500 font-medium mt-2">Please complete the patient onboarding details before accessing the dashboard.</p>
         </div>
 
@@ -152,6 +155,15 @@ export function SetupPatientProfilePage() {
                       onChange={e => setForm({ ...form, name: e.target.value })}
                     />
                   </div>
+
+                  <div className="space-y-2 col-span-1 md:col-span-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Profile Photo (Optional)</Label>
+                    <ImageUpload 
+                      value={form.imageUrl} 
+                      onChange={(base64) => setForm({ ...form, imageUrl: base64 })} 
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="age" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Age *</Label>
                     <Input
@@ -282,7 +294,7 @@ export function SetupPatientProfilePage() {
                   <div className="w-8 h-8 rounded-lg bg-blue-50 text-primary flex items-center justify-center font-bold">
                     <Activity size={16} />
                   </div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">4. Clinical & Mobility Stack</h3>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">4. Care & Mobility Needs</h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -363,7 +375,7 @@ export function SetupPatientProfilePage() {
                 className="w-full h-20 rounded-[28px] font-black text-xs uppercase tracking-[0.3em] shadow-3xl shadow-blue-500/20 bg-slate-950 hover:bg-black text-white active:scale-95 transition-all"
                 disabled={loading}
               >
-                {loading ? <Loader2 className="animate-spin mr-2" size={20} /> : 'SUBMIT CLINICAL SETUP'}
+                {loading ? <Loader2 className="animate-spin mr-2" size={20} /> : 'SUBMIT CARE PROFILE'}
                 {!loading && <ArrowRight className="ml-2 h-5 w-5" />}
               </Button>
             </form>

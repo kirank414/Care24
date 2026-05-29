@@ -1,6 +1,8 @@
 import express from "express";
 import mongoose from "mongoose";
 import Booking from "../models/Booking.js";
+import Complaint from "../models/Complaint.js";
+import { Review } from "../models/Review.js";
 import Notification from "../models/Notification.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -28,7 +30,7 @@ async function createNotification(
 // @access  Private
 router.post("/", protect, async (req: any, res) => {
   try {
-    const { patient, caregiver, service, startDate, endDate, totalAmount, notes } = req.body;
+    const { patient, caregiver, service, startDate, endDate, durationType, startTime, endTime, totalAmount, notes } = req.body;
 
     let booking: any = await Booking.create({
       patient,
@@ -36,6 +38,9 @@ router.post("/", protect, async (req: any, res) => {
       service,
       startDate,
       endDate,
+      durationType: durationType || "hourly",
+      startTime,
+      endTime,
       totalAmount,
       status: "pending",
       paymentStatus: "pending",
@@ -89,6 +94,33 @@ router.get("/me", protect, async (req: any, res) => {
       .populate("caregiver")
       .populate("service")
       .sort({ createdAt: -1 });
+
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: (error as Error).message });
+  }
+});
+
+// @desc    Get busy slots for a caregiver on a specific date
+// @route   GET /api/bookings/caregiver/:caregiverId/busy
+// @access  Private
+router.get("/caregiver/:caregiverId/busy", protect, async (req: any, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({ message: "Date is required" });
+    }
+    const targetDate = new Date(date as string);
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const bookings = await Booking.find({
+      caregiver: req.params.caregiverId,
+      status: { $in: ["pending", "confirmed", "active"] },
+      startDate: { $gte: startOfDay, $lte: endOfDay }
+    }).select("startTime endTime startDate");
 
     res.json(bookings);
   } catch (error) {
@@ -314,15 +346,12 @@ router.get("/admin/metrics", protect, authorize("admin"), async (req: any, res) 
       ? (totalResponseTimeMs / countedAccepts) / 60000 
       : 15; // default fallback 15 mins if no bookings accepted yet
 
-    // 3. User Satisfaction Score
-    const caregiversList = await Caregiver.find({});
+    // 3. User Satisfaction Score (CSAT) - from Reviews
+    const reviews = await Review.find({ isVisible: true });
     let totalRating = 0;
-    let ratedCount = 0;
-    caregiversList.forEach((cg: any) => {
-      if (cg.rating !== undefined) {
-        totalRating += cg.rating;
-        ratedCount++;
-      }
+    let ratedCount = reviews.length;
+    reviews.forEach((r: any) => {
+      totalRating += (r.rating || 5);
     });
     const userSatisfactionScore = ratedCount > 0 ? totalRating / ratedCount : 5.0;
 

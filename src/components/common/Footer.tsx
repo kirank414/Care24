@@ -1,10 +1,17 @@
-import { Heart, Globe, Send, Camera, Briefcase, Mail, Phone, MapPin, Share2, Award, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Heart, Globe, Send, Camera, Briefcase, Mail, Phone, MapPin, Share2, Award, ArrowRight, ShieldCheck, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useCareStore } from '../../stores/careStore';
+import { useEffect } from 'react';
 
 export function Footer() {
+  const { settings, fetchSettings } = useCareStore();
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
   return (
     <footer className="bg-[#071225] text-slate-300 relative overflow-hidden snap-start">
       {/* Refined Decorative Blur */}
@@ -38,19 +45,36 @@ export function Footer() {
                 <Heart className="h-7 w-7 text-white fill-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-3xl font-black tracking-tighter text-white">Care<span className="text-primary">24</span></span>
+                <span className="text-3xl font-black tracking-tighter text-white">
+                  {settings?.companyName ? settings.companyName : <><span className="text-white">Care</span><span className="text-primary">24</span></>}
+                </span>
                 <span className="text-[8px] font-black text-slate-600 uppercase tracking-[0.4em] mt-1">Global Standard</span>
               </div>
             </Link>
             <p className="text-slate-500 font-medium leading-relaxed text-sm">
-              Care24 orchestrates the world's most advanced clinical protocols for home-based recovery, ensuring every patient receives institutional-grade nursing and monitoring.
+              {settings?.footerDescription || 'Information will be updated by the administrator.'}
             </p>
             <div className="flex gap-4">
-              {[Globe, Send, Share2, Award].map((Icon, i) => (
-                <a key={i} href="#" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110">
-                  <Icon size={20} />
+              {settings?.facebookUrl && (
+                <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110">
+                  <Globe size={20} />
                 </a>
-              ))}
+              )}
+              {settings?.instagramUrl && (
+                <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110">
+                  <Camera size={20} />
+                </a>
+              )}
+              {settings?.linkedinUrl && (
+                <a href={settings.linkedinUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110">
+                  <Briefcase size={20} />
+                </a>
+              )}
+              {settings?.twitterUrl && (
+                <a href={settings.twitterUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110">
+                  <MessageSquare size={20} />
+                </a>
+              )}
             </div>
           </div>
 
@@ -111,22 +135,22 @@ export function Footer() {
               <div className="flex items-start gap-5 p-6 rounded-[32px] bg-white/[0.03] border border-white/5 group hover:bg-white/[0.06] transition-all">
                 <MapPin size={24} className="text-primary shrink-0 transition-transform group-hover:scale-110" />
                 <div>
-                   <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Global Headquarters</p>
-                   <p className="text-sm font-bold text-slate-300 leading-relaxed">International Financial Center <br />Level 42, Suite 1010 <br />Lower Manhattan, NY</p>
+                   <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Office Address</p>
+                   <p className="text-sm font-bold text-slate-300 leading-relaxed">{settings?.officeAddress || 'Information will be updated by the administrator.'}</p>
                 </div>
               </div>
               <div className="space-y-5">
-                <a href="tel:180024" className="flex items-center gap-5 text-[11px] font-black uppercase tracking-[0.2em] group hover:text-white transition-colors">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-xl">
+                <div className="flex items-center gap-5 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-primary shadow-xl">
                     <Phone size={20} />
                   </div>
-                  1-800-CARE-24
-                </a>
-                <a href="mailto:governance@care24.com" className="flex items-center gap-5 text-[11px] font-black uppercase tracking-[0.2em] group hover:text-white transition-colors">
+                  {settings?.supportPhone || 'Information will be updated by the administrator.'}
+                </div>
+                <a href={settings?.supportEmail ? `mailto:${settings.supportEmail}` : '#'} className="flex items-center gap-5 text-[11px] font-black uppercase tracking-[0.2em] group hover:text-white transition-colors">
                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-xl">
                     <Mail size={20} />
                   </div>
-                  governance@hq.care24
+                  {settings?.supportEmail || 'Information will be updated by the administrator.'}
                 </a>
               </div>
             </div>

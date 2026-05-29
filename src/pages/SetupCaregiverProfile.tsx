@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import { useCareStore } from '../stores/careStore';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ export function SetupCaregiverProfilePage() {
 
   const [form, setForm] = useState({
     title: '',
+    imageUrl: '',
     experienceYears: '',
     hourlyRate: '',
     bio: '',
@@ -45,10 +47,11 @@ export function SetupCaregiverProfilePage() {
 
     const payload = {
       title: form.title.trim(),
+      imageUrl: form.imageUrl.trim(),
       experienceYears: expYears,
       hourlyRate: hrRate,
       bio: form.bio.trim(),
-      specialties: form.specialties.split(',').map(s => s.trim()).filter(Boolean),
+      specialties: [form.specialties],
       cities: form.cities.split(',').map(s => s.trim()).filter(Boolean),
       availability: true,
     };
@@ -96,19 +99,27 @@ export function SetupCaregiverProfilePage() {
                   <div className="w-8 h-8 rounded-lg bg-blue-50 text-primary flex items-center justify-center font-bold">
                     <User size={16} />
                   </div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Clinical Credentials</h3>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Professional Credentials</h3>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Professional Title *</Label>
                   <Input
                     id="title"
-                    placeholder="e.g. ICU Critical Care RN, Senior Caregiver"
+                    placeholder="e.g. Certified Senior Caregiver, Senior Caregiver"
                     className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
                     value={form.title}
                     onChange={e => setForm({ ...form, title: e.target.value })}
                   />
                 </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Profile Photo (Optional)</Label>
+                    <ImageUpload 
+                      value={form.imageUrl} 
+                      onChange={(base64) => setForm({ ...form, imageUrl: base64 })} 
+                    />
+                  </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -142,16 +153,21 @@ export function SetupCaregiverProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="specs" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Specialties (comma-separated) *</Label>
+                  <Label htmlFor="specs" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Primary Service Category *</Label>
                   <div className="relative">
                     <Award className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                    <Input
+                    <select
                       id="specs"
-                      placeholder="e.g. ICU Care, Geriatrics, Dementia Support"
-                      className="pl-12 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="w-full pl-12 pr-6 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 appearance-none focus:outline-none focus:border-primary/20"
                       value={form.specialties}
                       onChange={e => setForm({ ...form, specialties: e.target.value })}
-                    />
+                    >
+                      <option value="" disabled>Select a Category...</option>
+                      <option value="Nursing Care">Nursing Care</option>
+                      <option value="Physiotherapy">Physiotherapy</option>
+                      <option value="Elderly Attendant">Elderly Attendant</option>
+                      <option value="Post-hospital Care">Post-hospital Care</option>
+                    </select>
                   </div>
                 </div>
 

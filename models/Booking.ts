@@ -17,6 +17,18 @@ const bookingSchema = new mongoose.Schema(
       ref: "ServiceCategory",
       required: true,
     },
+    durationType: {
+      type: String,
+      enum: ["hourly", "daily", "long-term"],
+      required: true,
+      default: "hourly",
+    },
+    startTime: {
+      type: String,
+    },
+    endTime: {
+      type: String,
+    },
     startDate: {
       type: Date,
       required: true,

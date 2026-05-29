@@ -28,7 +28,7 @@ export function PricingPage() {
       unit: billingCycle === 'weekly' ? '/wk' : '/mo',
       features: [
         'Certified Patient Attendant',
-        '8-Hour Clinical Oversight',
+        '8-Hour Caregiving Support',
         'Basic Vital Monitoring',
         'Daily Compliance Reports',
         'CareHub platform access'
@@ -37,17 +37,17 @@ export function PricingPage() {
       popular: false
     },
     {
-      name: 'Clinical Nursing',
-      tagline: 'Precision ICU recovery protocol',
+      name: 'Advanced Nursing',
+      tagline: 'Specialized medical recovery',
       price: billingCycle === 'weekly' ? '549' : '1999',
       unit: billingCycle === 'weekly' ? '/wk' : '/mo',
       features: [
         'Registered Nurse (RN) Lead',
-        '12-Hour Critical Care',
-        'Real-time Telemetry Sync',
-        'IV & clinical management',
+        '12-Hour Nursing Care',
+        'Real-time Health Updates',
+        'Medication management',
         'Bi-weekly MD Tele-Consult',
-        'Priority SOS Escalation'
+        'Priority Support Team'
       ],
       cta: 'GET STARTED',
       popular: true
@@ -59,11 +59,11 @@ export function PricingPage() {
       unit: '',
       features: [
         '24/7 Specialist Live-in',
-        'Home ICU infrastructure',
-        'Infinite Telemetry retention',
-        'Institutional Governance',
+        'Comprehensive home care setup',
+        'Detailed care history',
+        'Family Dashboard Access',
         'Global Insurance Concierge',
-        'Tier-1 Medical Hotline'
+        'Dedicated Care Coordinator'
       ],
       cta: 'TALK TO SALES',
       popular: false
@@ -165,12 +165,12 @@ export function PricingPage() {
       <section className="min-h-screen scroll-mt-12 flex items-center justify-center overflow-hidden bg-slate-50 rounded-[48px] mx-4 sm:mx-8 shadow-inner border border-slate-100 py-32">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] mb-24">Institutional Network Access</h3>
+           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] mb-24">Trusted Insurance Partners</h3>
            <div className="flex flex-wrap justify-center items-center gap-24 opacity-30 grayscale saturate-0 hover:opacity-100 hover:grayscale-0 transition-all duration-1000">
               <div className="flex items-center gap-4 font-black text-2xl tracking-tighter text-slate-900"><Building2 size={40} /> AETNA HEALTH</div>
               <div className="flex items-center gap-4 font-black text-2xl tracking-tighter text-slate-900"><Building2 size={40} /> CIGNA GLOBAL</div>
               <div className="flex items-center gap-4 font-black text-2xl tracking-tighter text-slate-900"><Building2 size={40} /> ALLIANZ CARE</div>
-              <div className="flex items-center gap-4 font-black text-2xl tracking-tighter text-slate-900"><Building2 size={40} /> UNITED CLINICAL</div>
+              <div className="flex items-center gap-4 font-black text-2xl tracking-tighter text-slate-900"><Building2 size={40} /> UNITED HEALTHCARE</div>
            </div>
            
            <div className="mt-40 p-20 rounded-[64px] bg-white border border-slate-100 max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-16 shadow-4xl group">
@@ -179,12 +179,12 @@ export function PricingPage() {
                     <Globe size={48} />
                  </div>
                  <div className="text-left">
-                    <h4 className="text-3xl font-bold text-slate-950 tracking-tight mb-2">Enterprise Protocols</h4>
-                    <p className="text-lg text-slate-500 font-medium leading-relaxed max-w-md">Bespoke pricing architectures for hospital groups and institutional care mandates.</p>
+                    <h4 className="text-3xl font-bold text-slate-950 tracking-tight mb-2">Custom Family Plans</h4>
+                    <p className="text-lg text-slate-500 font-medium leading-relaxed max-w-md">Flexible pricing options designed to accommodate unique family care needs and schedules.</p>
                  </div>
               </div>
-              <Button size="lg" className="h-20 px-12 rounded-[24px] bg-slate-950 text-white hover:bg-slate-900 font-black text-xs uppercase tracking-[0.2em] shadow-xl">
-                 GOVERNANCE DESK
+              <Button size="lg" className="h-20 px-12 rounded-[24px] bg-slate-950 text-white hover:bg-slate-900 font-black text-xs uppercase tracking-[0.2em] shadow-xl" render={<Link to="/contact" />} nativeButton={false}>
+                 CARE TEAM
               </Button>
            </div>
         </div>

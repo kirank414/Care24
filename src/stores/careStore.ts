@@ -5,6 +5,7 @@ export interface PatientProfile {
   _id: string;
   user: string | any;
   name: string;
+  imageUrl?: string;
   age: number;
   gender: string;
   bloodGroup: string;
@@ -28,6 +29,7 @@ export interface CaregiverProfile {
   _id: string;
   user: string | any;
   name: string;
+  imageUrl?: string;
   title: string;
   experienceYears: number;
   hourlyRate: number;
@@ -53,8 +55,11 @@ export interface Booking {
   patient: any;
   caregiver: any;
   service: any;
+  durationType?: 'hourly' | 'daily' | 'long-term';
   startDate: string | Date;
   endDate: string | Date;
+  startTime?: string;
+  endTime?: string;
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   totalAmount: number;
   paymentStatus: 'pending' | 'paid' | 'refunded';
@@ -106,6 +111,33 @@ export interface Complaint {
   updatedAt?: string | Date;
 }
 
+export interface SystemSettings {
+  _id?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroPrimaryCTA?: string;
+  heroSecondaryCTA?: string;
+  satisfactionTitle?: string;
+  satisfactionDescription?: string;
+  caregiverTrustTitle?: string;
+  caregiverTrustDescription?: string;
+  serviceCoverageTitle?: string;
+  serviceCoverageDescription?: string;
+  companyName?: string;
+  footerDescription?: string;
+  supportEmail: string;
+  supportPhone: string;
+  whatsappNumber?: string;
+  supportHours?: string;
+  officeAddress: string;
+  emergencyContact?: string;
+  supportedCities: string[];
+  facebookUrl?: string;
+  instagramUrl?: string;
+  linkedinUrl?: string;
+  twitterUrl?: string;
+}
+
 interface CareStoreState {
   patient: PatientProfile | null;
   caregiver: CaregiverProfile | null;
@@ -118,6 +150,8 @@ interface CareStoreState {
   unreadNotificationCount: number;
   adminMetrics: any;
   complaints: Complaint[];
+  inquiries: any[];
+  settings: SystemSettings | null;
   loading: boolean;
   error: string | null;
 
@@ -154,6 +188,11 @@ interface CareStoreState {
   deleteNotification: (id: string) => Promise<void>;
   // Admin
   fetchAdminMetrics: () => Promise<void>;
+  fetchInquiries: (admin?: boolean) => Promise<void>;
+  submitInquiry: (data: { question: string; email?: string }) => Promise<any>;
+  answerInquiry: (id: string, answer: string) => Promise<void>;
+  fetchSettings: () => Promise<void>;
+  updateSettings: (data: Partial<SystemSettings>) => Promise<void>;
   resetStore: () => void;
 }
 
@@ -169,6 +208,8 @@ export const useCareStore = create<CareStoreState>((set) => ({
   unreadNotificationCount: 0,
   adminMetrics: null,
   complaints: [],
+  inquiries: [],
+  settings: null,
   loading: false,
   error: null,
 
@@ -522,6 +563,64 @@ export const useCareStore = create<CareStoreState>((set) => ({
     }
   },
 
+  fetchInquiries: async (admin = false) => {
+    set({ loading: true, error: null });
+    try {
+      const endpoint = admin ? '/inquiries' : '/inquiries/my';
+      const res = await api.get(endpoint);
+      set({ inquiries: Array.isArray(res.data) ? res.data : [], loading: false });
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || err.message, loading: false });
+    }
+  },
+
+  submitInquiry: async (data) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.post('/inquiries', data);
+      set((state) => ({ inquiries: [res.data, ...state.inquiries], loading: false }));
+      return res.data;
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || err.message, loading: false });
+      throw err;
+    }
+  },
+
+  answerInquiry: async (id, answer) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.put(`/inquiries/${id}/answer`, { answer });
+      set((state) => ({
+        inquiries: state.inquiries.map((inq) => (inq._id === id ? res.data : inq)),
+        loading: false,
+      }));
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || err.message, loading: false });
+      throw err;
+    }
+  },
+
+  fetchSettings: async () => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.get('/settings');
+      set({ settings: res.data, loading: false });
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || err.message, loading: false });
+    }
+  },
+
+  updateSettings: async (data) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.put('/settings', data);
+      set({ settings: res.data, loading: false });
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || err.message, loading: false });
+      throw err;
+    }
+  },
+
   resetStore: () => {
     set({
       patient: null,
@@ -535,6 +634,8 @@ export const useCareStore = create<CareStoreState>((set) => ({
       unreadNotificationCount: 0,
       adminMetrics: null,
       complaints: [],
+      inquiries: [],
+      settings: null,
       loading: false,
       error: null,
     });

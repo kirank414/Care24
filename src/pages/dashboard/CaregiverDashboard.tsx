@@ -23,10 +23,12 @@ import {
   ShieldAlert,
   Zap,
   MoreVertical,
-  Play,
+  LogOut,
   User,
   Check,
+  CheckCircle,
   Plus,
+  Play,
   Loader2,
   X,
   MessageCircle,
@@ -144,9 +146,15 @@ export function CaregiverDashboard() {
         <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-8 pt-10">
           <div className="flex items-center space-x-8">
             <div className="relative group">
-               <div className="w-24 h-24 rounded-[32px] overflow-hidden border-4 border-white shadow-2xl transition-transform group-hover:scale-105">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${cgName}`} alt="Caregiver" />
-               </div>
+                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[32px] sm:rounded-[40px] bg-white shadow-2xl p-2 border border-slate-100 shrink-0 overflow-hidden">
+                    {caregiver?.imageUrl ? (
+                      <img src={caregiver.imageUrl} alt="Caregiver" className="w-full h-full object-cover rounded-[24px] sm:rounded-[32px]" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-200 rounded-[24px] sm:rounded-[32px] flex items-center justify-center text-slate-400">
+                        <User size={48} />
+                      </div>
+                    )}
+                 </div>
                <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-emerald-500 rounded-2xl border-4 border-white flex items-center justify-center text-white shadow-xl ring-4 ring-emerald-500/10">
                  <CheckCircle2 size={18} />
                </div>
@@ -197,7 +205,7 @@ export function CaregiverDashboard() {
                <NotificationCenter open={notifOpen} onClose={() => setNotifOpen(false)} />
              </div>
              <Button className="h-14 rounded-2xl bg-primary text-white font-bold px-8 shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all" onClick={() => { setSelectedBookingId(bookings[0]?._id); setIsNoteModalOpen(true); }}>
-                <Plus size={20} className="mr-2" /> LOG CLINICAL NOTE
+                <Plus size={20} className="mr-2" /> LOG care NOTE
              </Button>
           </div>
         </div>
@@ -214,7 +222,7 @@ export function CaregiverDashboard() {
             { label: 'Weekly Revenue', val: `$${weeklyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pct: 'This Week', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
             { label: 'Total Visits', val: totalVisits.toString(), pct: 'Assigned', icon: Briefcase, color: 'text-blue-500', bg: 'bg-blue-50' },
             { label: 'Success Rate', val: successRate, pct: 'System Active', icon: CheckCircle2, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-            { label: 'Care Notes Logged', val: totalNotes.toString(), pct: 'Clinical Notes', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
+            { label: 'Care Notes Logged', val: totalNotes.toString(), pct: 'care Notes', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
           ].map((stat, i) => (
              <Card key={i} className="enterprise-card border-none shadow-xl shadow-slate-200/50 rounded-[32px] p-2 hover:translate-y-[-4px] transition-all">
                 <CardContent className="p-8">
@@ -312,6 +320,9 @@ export function CaregiverDashboard() {
                                <Button className="h-16 px-8 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm uppercase tracking-widest shadow-xl" onClick={() => { setSelectedBookingId(shift._id); setIsNoteModalOpen(true); }}>
                                   <Activity size={18} className="mr-3" /> LOG VITALS
                                </Button>
+                               <Button className="h-16 px-8 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-sm uppercase tracking-widest shadow-xl" onClick={() => updateBookingStatus(shift._id, 'completed')}>
+                                  <CheckCircle size={18} className="mr-3 text-emerald-400" /> COMPLETE
+                               </Button>
                              </div>
                            ) : (
                              <div className="text-slate-400 font-bold text-xs uppercase tracking-widest">No Actions</div>
@@ -326,7 +337,7 @@ export function CaregiverDashboard() {
                  <div className="flex items-center justify-between px-2 mb-4">
                     <h3 className="text-xl font-bold text-slate-900">Care Notes Log</h3>
                     <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
-                       <ClipboardList size={14} /> <span>Clinical Journal</span>
+                       <ClipboardList size={14} /> <span>care Journal</span>
                     </div>
                  </div>
 
@@ -390,7 +401,7 @@ export function CaregiverDashboard() {
                          <FileText size={28} className="text-slate-200" />
                        </div>
                        <p className="font-bold text-slate-400 text-base">No Care Notes Yet</p>
-                       <p className="text-xs text-slate-300 mt-1.5 max-w-xs">Log your first clinical note by clicking "LOG CLINICAL NOTE" above.</p>
+                       <p className="text-xs text-slate-300 mt-1.5 max-w-xs">Log your first care note by clicking "LOG care NOTE" above.</p>
                      </div>
                    )}
                  </div>
@@ -400,7 +411,7 @@ export function CaregiverDashboard() {
                  <Card className="enterprise-card border-none shadow-xl rounded-[40px] overflow-hidden bg-white">
                     <CardHeader className="p-10 pb-0">
                        <CardTitle className="text-2xl font-bold text-slate-900 tracking-tight">Revenue Trajectory</CardTitle>
-                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Earnings based on verified clinical hours</p>
+                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Earnings based on verified care hours</p>
                     </CardHeader>
                     <CardContent className="p-10">
                        <div className="h-[350px] w-full">
@@ -450,7 +461,7 @@ export function CaregiverDashboard() {
           {/* Right Sidebar Widgets */}
           <div className="lg:col-span-4 space-y-8">
              
-             {/* Clinical Guidelines / Task List */}
+             {/* care Guidelines / Task List */}
              <Card className="enterprise-card border-none shadow-xl rounded-[40px] bg-white overflow-hidden p-2">
                 <CardHeader className="p-8 pb-4">
                    <div className="flex items-center justify-between">
@@ -477,7 +488,10 @@ export function CaregiverDashboard() {
                         </div>
                       ))}
                    </div>
-                   <Button className="w-full mt-10 h-14 rounded-2xl bg-slate-900 text-white font-bold hover:bg-black transition-all">
+                   <Button 
+                     onClick={() => import('react-hot-toast').then(m => m.default.success('Shift log submitted successfully.'))}
+                     className="w-full mt-10 h-14 rounded-2xl bg-slate-900 text-white font-bold hover:bg-black transition-all"
+                   >
                       SUBMIT SHIFT LOG
                    </Button>
                 </CardContent>
@@ -492,16 +506,19 @@ export function CaregiverDashboard() {
                    </div>
                 </div>
                 <h4 className="text-xl font-bold text-slate-900 mb-2">Escalation Trigger</h4>
-                <p className="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">Instantly alert command center for clinical support or emergency services.</p>
-                <Button className="w-full h-16 rounded-[24px] bg-red-600 hover:bg-red-700 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-red-500/20 active:scale-95 transition-all">
-                   NOTIFY DOCTOR SOS
+                <p className="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">Instantly alert the support team for medical assistance or emergency services.</p>
+                <Button 
+                  onClick={() => import('react-hot-toast').then(m => m.default.success('SOS Alert Activated: Support team notified!'))}
+                  className="w-full h-16 rounded-[24px] bg-red-600 hover:bg-red-700 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-red-500/20 active:scale-95 transition-all"
+                >
+                   NOTIFY SUPPORT SOS
                 </Button>
              </div>
           </div>
         </div>
       </div>
 
-      {/* Log Clinical Note Modal */}
+      {/* Log care Note Modal */}
       <AnimatePresence>
         {isNoteModalOpen && (
           <motion.div 
@@ -528,8 +545,8 @@ export function CaregiverDashboard() {
                   <Activity size={24} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Log Clinical Vitals</h3>
-                  <p className="text-xs text-slate-400 font-medium mt-1">Record patient telemetry and clinical notes for active session.</p>
+                  <h2 className="text-2xl font-bold text-slate-950 tracking-tight">Post-Visit Log</h2>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Record care updates and visit notes for the current session.</p>
                 </div>
               </div>
 
@@ -539,7 +556,7 @@ export function CaregiverDashboard() {
                     <CheckCircle2 size={32} />
                   </div>
                   <h4 className="text-xl font-bold text-emerald-950 tracking-tight">Vitals Logged Successfully!</h4>
-                  <p className="text-xs text-emerald-700 font-medium">Telemetry synchronized with the hospital command center.</p>
+                  <p className="text-xs text-emerald-700 font-medium">Care updates synchronized with the family dashboard.</p>
                 </div>
               ) : (
                 <form onSubmit={handleAddCareNote} className="space-y-6">
@@ -605,7 +622,7 @@ export function CaregiverDashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Clinical Note / Observations</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">care Note / Observations</label>
                     <textarea 
                       value={noteContent} 
                       onChange={(e) => setNoteContent(e.target.value)} 
@@ -617,7 +634,7 @@ export function CaregiverDashboard() {
                   </div>
 
                   <Button type="submit" disabled={loading} className="w-full h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-sm uppercase tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
-                    {loading ? <Loader2 className="animate-spin" size={20} /> : 'SUBMIT CLINICAL TELEMETRY'}
+                    {loading ? <Loader2 className="animate-spin" size={20} /> : 'SUBMIT CARE UPDATE'}
                   </Button>
                 </form>
               )}

@@ -25,7 +25,7 @@ const ComingSoon = ({ title }: { title: string }) => (
        <span className="text-4xl font-bold">!</span>
     </div>
     <h1 className="text-4xl font-bold text-slate-900 mb-4">{title}</h1>
-    <p className="text-slate-500 mb-8 max-w-md text-center font-medium">We're finalizing our clinical protocols for this section. The expanded Care24 Enterprise platform is arriving shortly.</p>
+    <p className="text-slate-500 mb-8 max-w-md text-center font-medium">We're finalizing our care plans for this section. The expanded Care24 Enterprise platform is arriving shortly.</p>
     <a href="/" className="px-8 h-12 bg-primary text-white rounded-xl flex items-center font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all">Back to Ecosystem Hub</a>
   </div>
 );

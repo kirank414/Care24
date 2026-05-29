@@ -51,8 +51,24 @@ import {
 } from 'recharts';
 import { useCareStore } from '../../stores/careStore';
 import { useAuthStore } from '../../store';
+import { api } from '../../api';
 import { toast } from 'sonner';
 import NotificationCenter from '../../components/NotificationCenter';
+
+const TIME_SLOTS = [
+  { label: "08:00 AM - 09:00 AM", start: "08:00", end: "09:00" },
+  { label: "09:00 AM - 10:00 AM", start: "09:00", end: "10:00" },
+  { label: "10:00 AM - 11:00 AM", start: "10:00", end: "11:00" },
+  { label: "11:00 AM - 12:00 PM", start: "11:00", end: "12:00" },
+  { label: "12:00 PM - 01:00 PM", start: "12:00", end: "13:00" },
+  { label: "01:00 PM - 02:00 PM", start: "13:00", end: "14:00" },
+  { label: "02:00 PM - 03:00 PM", start: "14:00", end: "15:00" },
+  { label: "03:00 PM - 04:00 PM", start: "15:00", end: "16:00" },
+  { label: "04:00 PM - 05:00 PM", start: "16:00", end: "17:00" },
+  { label: "05:00 PM - 06:00 PM", start: "17:00", end: "18:00" },
+  { label: "06:00 PM - 07:00 PM", start: "18:00", end: "19:00" },
+  { label: "07:00 PM - 08:00 PM", start: "19:00", end: "20:00" },
+];
 
 const initialChartData = [
   { time: '08:00', heartRate: 72, oxygen: 98, bp: 120 },
@@ -74,24 +90,67 @@ export function UserDashboard() {
     loading, 
     error, 
     unreadNotificationCount,
+    inquiries,
     fetchPatientMe, 
     fetchBookings, 
     fetchServices, 
     fetchCaregivers,
     fetchCareNotes,
     fetchUnreadNotificationCount,
+    fetchInquiries,
     createBooking,
     updatePatient,
-    submitComplaint
+    submitComplaint,
+    settings,
+    fetchSettings
   } = useCareStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState('');
   const [selectedCaregiver, setSelectedCaregiver] = useState('');
+  const [durationType, setDurationType] = useState<'hourly' | 'daily' | 'long-term'>('hourly');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [busySlots, setBusySlots] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (selectedCaregiver && startDate) {
+      api.get(`/bookings/caregiver/${selectedCaregiver}/busy?date=${startDate}`)
+        .then((res) => {
+          setBusySlots(res.data || []);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch busy slots:", err);
+        });
+    } else {
+      setBusySlots([]);
+    }
+  }, [selectedCaregiver, startDate]);
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      setSelectedService('');
+      setSelectedCaregiver('');
+      setDurationType('hourly');
+      setStartDate('');
+      setEndDate('');
+      setStartTime('');
+      setEndTime('');
+      setSelectedTimeSlot('');
+    }
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    setStartTime('');
+    setEndTime('');
+    setSelectedTimeSlot('');
+  }, [selectedCaregiver, startDate]);
 
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
   const [complaintBookingId, setComplaintBookingId] = useState('');
@@ -155,6 +214,8 @@ export function UserDashboard() {
     fetchServices();
     fetchCaregivers();
     fetchUnreadNotificationCount();
+    fetchInquiries();
+    fetchSettings();
   }, []);
 
   useEffect(() => {
@@ -165,7 +226,13 @@ export function UserDashboard() {
 
   const handleCreateBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedService || !selectedCaregiver || !startDate || !endDate) return;
+    if (!selectedService || !selectedCaregiver) return;
+    // Validate based on duration type
+    if (durationType === 'hourly') {
+      if (!startDate || !startTime || !endTime) return;
+    } else if (durationType === 'daily') {
+      if (!startDate || !endDate) return;
+    } // long-term requires no dates
 
     const cg = caregivers.find(c => c._id === selectedCaregiver);
     const rate = cg?.hourlyRate || 45;
@@ -186,17 +253,31 @@ export function UserDashboard() {
       }
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1);
-    const amount = days * 8 * rate; // 8 hours daily shift
+    // Compute amount based on duration type
+    let amount = 0;
+    if (durationType === 'hourly') {
+      // Assume 1 hour per slot for simplicity; could be refined with time diff
+      const hourCount = 1;
+      amount = hourCount * rate;
+    } else if (durationType === 'daily') {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1);
+      amount = days * 8 * rate; // 8 hours daily shift
+    } else if (durationType === 'long-term') {
+      // Placeholder amount; could be negotiated separately
+      amount = 0;
+    }
 
     await createBooking({
       patient: patient?._id,
       caregiver: selectedCaregiver,
       service: selectedService,
-      startDate,
-      endDate,
+      durationType,
+      startDate: durationType === 'hourly' ? startDate : startDate,
+      endDate: durationType === 'hourly' ? startDate : endDate,
+      startTime: durationType === 'hourly' ? startTime : undefined,
+      endTime: durationType === 'hourly' ? endTime : undefined,
       totalAmount: amount,
     });
 
@@ -881,10 +962,47 @@ export function UserDashboard() {
                        <p className="font-bold text-slate-400 text-base">No Clinical Notes Yet</p>
                        <p className="text-xs text-slate-300 mt-1.5 text-center max-w-xs">Care notes will appear here once your caregiver begins logging session observations.</p>
                      </div>
-                  )}
-               </div>
+                   )}
+              </div>
             </div>
-          </div>
+
+              {/* FAQ Support & Inquiries */}
+              <div className="p-8 rounded-[40px] bg-white border border-slate-100 shadow-sm mt-6">
+                 <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-slate-900 tracking-tight">Support Inquiries</h3>
+                    <Badge className="bg-slate-100 text-slate-500 border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
+                      {inquiries ? inquiries.length : 0} TOTAL
+                    </Badge>
+                 </div>
+                 
+                 {!inquiries || inquiries.length === 0 ? (
+                   <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <p className="text-xs text-slate-400 font-medium">No inquiries submitted yet</p>
+                      <p className="text-[10px] text-slate-300 mt-1">Submit a question in the FAQ section on the home page.</p>
+                   </div>
+                 ) : (
+                   <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
+                     {inquiries.map((inq: any, i: number) => (
+                       <div key={inq._id || i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-100 transition-colors">
+                         <p className="text-xs font-bold text-slate-900 leading-tight">Q: {inq.question}</p>
+                         {inq.status === 'answered' ? (
+                           <div className="mt-2.5 pl-3 border-l-2 border-primary">
+                             <p className="text-[11px] font-semibold text-primary">A: {inq.answer}</p>
+                             <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">Answered by Care Concierge</p>
+                           </div>
+                         ) : (
+                           <div className="mt-2.5 flex items-center gap-1.5 text-[9px] font-bold text-amber-500 uppercase">
+                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                             <span>Pending Response</span>
+                           </div>
+                         )}
+                       </div>
+                     ))}
+                   </div>
+                 )}
+              </div>
+ 
+           </div>
 
           {/* Right Column - Sidebar Widgets */}
           <div className="lg:col-span-4 space-y-10">
@@ -1054,9 +1172,20 @@ export function UserDashboard() {
                       className="w-full h-14 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
                     >
                       <option value="">-- Select Service --</option>
-                      {services.map(s => (
-                        <option key={s._id} value={s._id}>{s.title} ({s.priceRange})</option>
-                      ))}
+                      {services.filter(svc => 
+                        caregivers.some(cg => 
+                          cg.isVerified && cg.specialties && cg.specialties.some((sp: string) => 
+                            sp.toLowerCase().includes(svc.title.toLowerCase()) || svc.title.toLowerCase().includes(sp.toLowerCase())
+                          )
+                        )
+                      ).map(s => {
+                        const matchingCg = caregivers.filter((cg: any) => cg.isVerified && cg.specialties && cg.specialties.some((sp: string) => sp.toLowerCase().includes(s.title.toLowerCase()) || s.title.toLowerCase().includes(sp.toLowerCase())));
+                        const minRate = matchingCg.length > 0 ? Math.min(...matchingCg.map((c: any) => c.hourlyRate || 9999)) : null;
+                        const priceLabel = minRate && minRate !== 9999 ? `From $${minRate}/hr` : s.priceRange;
+                        return (
+                          <option key={s._id} value={s._id}>{s.title} ({priceLabel})</option>
+                        );
+                      })}
                     </select>
                   </div>
 
@@ -1093,55 +1222,150 @@ export function UserDashboard() {
                     >
                       <option value="">-- Select Caregiver --</option>
                       {caregivers
-                        .filter(cg => cg.isVerified)
-                        .map(cg => {
-                          let isMatchingLoc = true;
-                          if (patient && patient.address) {
-                            const patientAddr = patient.address.toLowerCase();
-                            if (!cg.cities || cg.cities.length === 0) {
-                              isMatchingLoc = patientAddr.includes('new york') || patientAddr.includes('ny');
-                            } else {
-                              isMatchingLoc = cg.cities.some(city => 
-                                patientAddr.includes(city.toLowerCase().trim()) ||
-                                city.toLowerCase().trim().includes(patientAddr)
-                              );
+                          .filter(cg => {
+                            if (!cg.isVerified) return false;
+                            
+                            // Filter by selected service
+                            if (selectedService) {
+                              const svc = services.find(s => s._id === selectedService);
+                              if (svc) {
+                                if (!cg.specialties || cg.specialties.length === 0) return false;
+                                const matchesService = cg.specialties.some((sp: string) => 
+                                  sp.toLowerCase().includes(svc.title.toLowerCase()) || 
+                                  svc.title.toLowerCase().includes(sp.toLowerCase())
+                                );
+                                if (!matchesService) return false;
+                              }
                             }
-                          }
-                          return (
-                            <option 
-                              key={cg._id} 
-                              value={cg._id} 
-                              disabled={!isMatchingLoc}
-                            >
-                              {cg.name} - {cg.title} {!isMatchingLoc ? "(Not serving your area)" : ""}
-                            </option>
-                          );
-                        })}
+                            
+                            return true;
+                          })
+                          .map(cg => {
+                            let isMatchingLoc = true;
+                            if (patient && patient.address) {
+                              const patientAddr = patient.address.toLowerCase();
+                              if (!cg.cities || cg.cities.length === 0) {
+                                isMatchingLoc = patientAddr.includes('new york') || patientAddr.includes('ny');
+                              } else {
+                                isMatchingLoc = cg.cities.some(city => 
+                                  patientAddr.includes(city.toLowerCase().trim()) ||
+                                  city.toLowerCase().trim().includes(patientAddr)
+                                );
+                              }
+                            }
+                            return (
+                              <option 
+                                key={cg._id} 
+                                value={cg._id} 
+                                disabled={!isMatchingLoc}
+                              >
+                                {cg.name} - {cg.title} {!isMatchingLoc ? "(Not serving your area)" : ""}
+                              </option>
+                            );
+                          })}
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Start Date</label>
-                      <input 
-                        type="date" 
-                        value={startDate} 
-                        onChange={(e) => setStartDate(e.target.value)} 
-                        required 
-                        className="w-full h-14 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all" 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">End Date</label>
-                      <input 
-                        type="date" 
-                        value={endDate} 
-                        onChange={(e) => setEndDate(e.target.value)} 
-                        required 
-                        className="w-full h-14 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all" 
-                      />
-                    </div>
+                  <div className="flex space-x-2 mb-4">
+                    <Button
+                      type="button"
+                      variant={durationType === 'hourly' ? 'default' : 'outline'}
+                      onClick={() => setDurationType('hourly')}
+                    >Hourly</Button>
+                    <Button
+                      type="button"
+                      variant={durationType === 'daily' ? 'default' : 'outline'}
+                      onClick={() => setDurationType('daily')}
+                    >Daily</Button>
+                    <Button
+                      type="button"
+                      variant={durationType === 'long-term' ? 'default' : 'outline'}
+                      onClick={() => setDurationType('long-term')}
+                    >Long Term</Button>
                   </div>
+
+                  {durationType === 'hourly' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Date</label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          required
+                          className="w-full h-14 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Time Slot</label>
+                        <select
+                          value={selectedTimeSlot}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSelectedTimeSlot(val);
+                            if (val) {
+                              const slot = TIME_SLOTS.find(s => s.label === val);
+                              if (slot) {
+                                setStartTime(slot.start);
+                                setEndTime(slot.end);
+                              }
+                            } else {
+                              setStartTime('');
+                              setEndTime('');
+                            }
+                          }}
+                          required
+                          className="w-full h-14 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        >
+                          <option value="">-- Select Time Slot --</option>
+                          {TIME_SLOTS.map((slot) => {
+                            // Check if slot overlaps with any busy slots
+                            const isBooked = busySlots.some(b => {
+                              if (!b.startTime || !b.endTime) return false;
+                              return slot.start < b.endTime && slot.end > b.startTime;
+                            });
+                            return (
+                              <option key={slot.label} value={slot.label} disabled={isBooked}>
+                                {slot.label} {isBooked ? "(Already Booked)" : ""}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {durationType === 'daily' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Start Date</label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          required
+                          className="w-full h-14 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">End Date</label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          required
+                          className="w-full h-14 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {durationType === 'long-term' && (
+                    <div className="p-4 bg-slate-50 rounded-2xl text-slate-700">
+                      <p className="font-medium mb-2">For long‑term care plans, please contact our support team to discuss personalized solutions.</p>
+                      <p className="text-sm">Email: {settings?.supportEmail ? <a href={`mailto:${settings.supportEmail}`} className="text-primary underline">{settings.supportEmail}</a> : 'Information will be updated by the administrator.'}</p>
+                    </div>
+                  )}
 
                   <Button type="submit" disabled={loading} className="w-full h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-sm uppercase tracking-widest shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
                     {loading ? <Loader2 className="animate-spin" size={20} /> : 'CONFIRM BOOKING REQUEST'}

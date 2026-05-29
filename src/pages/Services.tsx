@@ -11,11 +11,12 @@ import {
   CheckCircle2,
   ShieldAlert,
   Dna,
-  Thermometer
-
+  Thermometer,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { useCareStore } from '../stores/careStore';
 import nursingCareImg from '../assets/nursing-care.png';
 import physiotherapyImg from '../assets/physiotherapy.jpg';
@@ -32,51 +33,87 @@ const serviceImages: Record<string, string> = {
 };
 
 export function ServicesPage() {
-  const { services, fetchServices, loading } = useCareStore();
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const { services, loading, fetchServices } = useCareStore();
 
   React.useEffect(() => {
     fetchServices();
   }, []);
+  
+  const FIXED_SERVICES = [
+     {
+       _id: '1',
+       title: 'Nursing Care',
+       description: 'Professional nursing care and medical management by certified RNs.',
+       icon: 'Activity',
+       priceRange: 'Standard Rates',
+       features: ['Certified RNs', 'Vitals Monitoring', 'Medication Management']
+     },
+     {
+       _id: '2',
+       title: 'Physiotherapy',
+       description: 'Expert physical rehabilitation and mobility support at home.',
+       icon: 'Activity',
+       priceRange: 'Standard Rates',
+       features: ['Certified PTs', 'Mobility Exercises', 'Pain Management']
+     },
+     {
+       _id: '3',
+       title: 'Elderly Attendant',
+       description: 'Compassionate daily living assistance and companionship.',
+       icon: 'UserPlus',
+       priceRange: 'Standard Rates',
+       features: ['Daily Assistance', 'Hygiene Care', 'Companionship']
+     },
+     {
+       _id: '4',
+       title: 'Post-hospital Care',
+       description: 'Specialized recovery care and compassionate support protocols.',
+       icon: 'Activity',
+       priceRange: 'Standard Rates',
+       features: ['Recovery Support', 'Vitals Care', 'Safety Monitoring']
+     }
+  ];
 
   return (
-    <div className="bg-slate-50 min-h-screen selection:bg-primary/10 pb-12 space-y-12">
+    <div className="bg-slate-50 min-h-screen selection:bg-primary/10 pb-12 space-y-6">
 
       {/* Background Polish */}
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.04),transparent_50%)]"></div>
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/az-subtle.png')] opacity-10 pointer-events-none"></div>
       
-        <section className="!mt-0 scroll-mt-12 flex flex-col items-center w-full pt-8 pb-16 px-0">
+        <section className="!mt-0 scroll-mt-12 flex flex-col items-center w-full pt-8 pb-4 px-0">
 
           {/* Header Section - Refined */}
-          <div className="text-center mb-6 w-full px-0">
+          <div className="text-center mb-4 w-full px-0">
             <Badge className="bg-primary/5 text-primary border-primary/20 px-5 py-2 mb-8 text-[10px] font-bold uppercase tracking-[0.4em] rounded-full shadow-sm">
-              Clinical Protocols v4.2
+              Trusted Family Support
             </Badge>
             <h1 className="text-6xl lg:text-[80px] font-black text-slate-950 tracking-tighter mb-8 leading-[0.85]">
-              Healthcare <br />
-              <span className="text-slate-400 font-medium italic">industrialized.</span>
+              Compassionate Care <br />
+              <span className="text-slate-400 font-medium italic">at your home.</span>
             </h1>
-            <p className="text-lg lg:text-xl text-slate-500 leading-relaxed font-medium w-full tracking-tight px-4">
-              We've standardized complex geriatric and critical care into predictable, hospital-grade home services. Audited, verified, and strictly governed.
+            <p className="text-lg lg:text-xl text-slate-500 leading-relaxed font-medium w-full tracking-tight px-4 mb-12">
+              We provide professional, personalized elderly care with compassion and warmth. Your loved ones are safe with our verified caregivers.
             </p>
-          </div>
-
-          {/* Categories Bar - Elite Design */}
-          <div className="flex flex-wrap justify-center gap-4">
-             {['All Modalities', 'ICU Step-down', 'Post-Surgical', 'Dementia Care', 'Chronic Care'].map((cat, i) => (
-               <Button 
-                  key={cat} 
-                  variant={i === 0 ? 'default' : 'ghost'}
-                  className={`h-12 px-8 rounded-[16px] font-black text-[10px] uppercase tracking-[0.2em] transition-all ${i === 0 ? 'bg-slate-950 text-white shadow-2xl' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-900 shadow-sm'}`}
-               >
-                  {cat}
-               </Button>
-             ))}
+            
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto px-4">
+               <div className="relative">
+                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                  <Input 
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                     placeholder="Search for a service..." 
+                     className="h-16 pl-14 pr-6 bg-white border-transparent rounded-[24px] text-lg font-medium placeholder:text-slate-300 focus-visible:ring-4 focus-visible:ring-primary/5 shadow-xl"
+                  />
+               </div>
+            </div>
           </div>
         </section>
 
         {/* Simplified 4-Card Grid Section */}
-        <section className="snap-start scroll-mt-12 px-4 sm:px-6 lg:px-8 pt-4 pb-24">
+        <section className="snap-start scroll-mt-12 px-4 sm:px-6 lg:px-8 pt-0 pb-12">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {loading ? (
@@ -87,12 +124,22 @@ export function ServicesPage() {
                     <div className="h-4 w-1/2 bg-slate-100 rounded-full"></div>
                   </div>
                 ))
-              ) : services.length === 0 ? (
-                <div className="col-span-full py-16 text-center text-slate-400 font-bold">
-                  No service modalities configured.
-                </div>
-              ) : (
-                services.map((service, index) => {
+              ) : (() => {
+                  const displayServices = services && services.length > 0 ? services : FIXED_SERVICES;
+                  const filteredServices = displayServices.filter((service: any) => 
+                    service.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    service.description.toLowerCase().includes(searchTerm.toLowerCase())
+                  );
+                  
+                  if (filteredServices.length === 0) {
+                    return (
+                      <div className="col-span-full py-16 text-center text-slate-400 font-bold">
+                        No services found matching your search.
+                      </div>
+                    );
+                  }
+                  
+                  return filteredServices.map((service, index) => {
                   const Icon = {
                     Stethoscope,
                     Activity,
@@ -140,7 +187,7 @@ export function ServicesPage() {
                               <>
                                 <div className="flex items-center gap-3">
                                   <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                                  <p className="text-xs font-bold text-slate-700">Hospital-grade protocols</p>
+                                  <p className="text-xs font-bold text-slate-700">Compassionate Support</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
@@ -155,16 +202,19 @@ export function ServicesPage() {
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Price baseline</p>
                               <p className="text-lg font-black text-slate-950">{service.priceRange}</p>
                             </div>
-                            <Button className="h-10 px-6 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest" render={<Link to="/caregivers" />} nativeButton={false}>
+                            <Link 
+                              to={`/caregivers?category=${service.title}`} 
+                              className="inline-flex items-center justify-center h-10 px-6 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest"
+                            >
                               BOOK NOW <ArrowRight className="ml-2 w-3 h-3" />
-                            </Button>
+                            </Link>
                           </div>
                         </div>
                       </Card>
                     </motion.div>
                   );
-                })
-              )}
+                });
+              })()}
             </div>
           </div>
         </section>
@@ -179,10 +229,10 @@ export function ServicesPage() {
         <div className="max-w-7xl mx-auto px-8 sm:px-16 lg:px-24 relative z-10">
            <div className="grid grid-cols-1 lg:grid-cols-2 gap-32 items-center">
               <div>
-                 <Badge className="bg-white/5 text-white border-white/10 px-6 py-2 mb-12 text-[10px] font-black uppercase tracking-[0.4em] rounded-full">Governance Layer</Badge>
-                 <h2 className="text-5xl lg:text-8xl font-bold text-white tracking-[-0.05em] leading-[0.85] mb-12">Care data <br />governed by <span className="text-primary italic">Zero-Trust.</span></h2>
+                 <Badge className="bg-white/5 text-white border-white/10 px-6 py-2 mb-12 text-[10px] font-black uppercase tracking-[0.4em] rounded-full">Family Protection</Badge>
+                 <h2 className="text-5xl lg:text-8xl font-bold text-white tracking-[-0.05em] leading-[0.85] mb-12">Your privacy <br />protected with <span className="text-primary italic">Compassion.</span></h2>
                  <p className="text-xl lg:text-2xl text-slate-400 mb-6 leading-relaxed font-medium">
-                   We manage patient telemetry through encrypted pipelines, ensuring that every clinical interaction is audited and every vital sign is secured at the hardware level.
+                   We manage your family's care information securely, ensuring that every detail is private and accessible only to trusted care coordinators.
                  </p>
                  <div className="grid grid-cols-3 gap-8 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-700">
                     <div className="flex flex-col items-center lg:items-start gap-4">
@@ -202,10 +252,10 @@ export function ServicesPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                  {[
-                   { t: 'Secure Gateway', d: 'Encrypted end-to-end telemetry between carer and family hub.' },
-                   { t: 'Privacy Shield', d: 'Anonymized patient profiles for initial carer matchmaking.' },
-                   { t: 'Audit Trail', d: 'Immutable blockchain-inspired logging for clinical interactions.' },
-                   { t: 'GDPR Vault', d: 'European-standard data sovereignty and portable health records.' }
+                   { t: 'Family Hub', d: 'Secure communication between your verified caregiver and your family.' },
+                   { t: 'Privacy Shield', d: 'Protecting your loved one\'s details while finding the perfect match.' },
+                   { t: 'Care History', d: 'Complete records of all care visits, notes, and progress updates.' },
+                   { t: 'Data Protection', d: 'Strict security measures to ensure your health information is always safe.' }
                  ].map((f, i) => (
                    <div key={i} className="p-10 rounded-[48px] bg-white/5 border border-white/10 backdrop-blur-3xl hover:bg-white/10 transition-colors">
                       <div className="w-14 h-14 rounded-2xl bg-primary/20 text-primary flex items-center justify-center mb-8 shadow-inner">
@@ -225,14 +275,14 @@ export function ServicesPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
            <Badge className="bg-primary/5 text-primary border-primary/20 px-4 py-2 mb-4 text-[10px] font-black uppercase tracking-[0.2em] rounded-full">Next Steps</Badge>
-           <h2 className="text-4xl lg:text-5xl font-bold text-slate-950 tracking-[-0.06em] mb-4 italic">Precision care. <br /><span className="text-slate-300 not-italic">Starting today.</span></h2>
-           <p className="text-xl text-slate-500 mb-8 max-w-3xl mx-auto font-medium leading-relaxed">Whether you need an ICU nurse for tonight or a physical therapist for a 6-month recovery, we have the specialized protocol ready.</p>
+           <h2 className="text-4xl lg:text-5xl font-bold text-slate-950 tracking-[-0.06em] mb-4 italic">Compassionate care. <br /><span className="text-slate-300 not-italic">Starting today.</span></h2>
+           <p className="text-xl text-slate-500 mb-8 max-w-3xl mx-auto font-medium leading-relaxed">Whether you need a dedicated attendant for tonight or a caring physical therapist for a 6-month recovery, we are here for you.</p>
            <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
               <Button size="lg" className="h-24 px-20 rounded-[32px] bg-slate-950 text-white hover:bg-slate-900 font-black text-xl shadow-4xl shadow-slate-200" render={<Link to="/pricing" />} nativeButton={false}>
-                VIEW ARCHITECTURE
+                VIEW SERVICES
               </Button>
-              <Button size="lg" variant="ghost" className="h-24 px-12 rounded-[32px] font-black text-lg uppercase tracking-widest text-slate-400 hover:text-slate-900">
-                Contact Sales <ArrowRight className="ml-4" />
+              <Button size="lg" variant="ghost" className="h-24 px-12 rounded-[32px] font-black text-lg uppercase tracking-widest text-slate-400 hover:text-slate-900" render={<Link to="/contact" />} nativeButton={false}>
+                Contact Support <ArrowRight className="ml-4" />
               </Button>
            </div>
         </div>

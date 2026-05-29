@@ -12,6 +12,9 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import careNoteRoutes from "./routes/careNoteRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
+import inquiryRoutes from "./routes/inquiryRoutes.js";
+import settingRoutes from "./routes/settingRoutes.js";
 
 dotenv.config();
 
@@ -25,7 +28,7 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT || 3000);
 
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
 
   // API Routes
   app.use("/api/auth", authRoutes);
@@ -36,6 +39,9 @@ async function startServer() {
   app.use("/api/notes", careNoteRoutes);
   app.use("/api/notifications", notificationRoutes);
   app.use("/api/complaints", complaintRoutes);
+  app.use("/api/reviews", reviewRoutes);
+  app.use("/api/inquiries", inquiryRoutes);
+  app.use("/api/settings", settingRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", message: "Care24 API is operational" });
@@ -60,6 +66,15 @@ async function startServer() {
     console.log(`Care24 Server running on http://localhost:${PORT}`);
   });
 }
+
+// Global error handlers to keep the server running even if async/database operations fail
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception thrown:", error);
+});
 
 startServer().catch((err) => {
   console.error("Failed to start server:", err);

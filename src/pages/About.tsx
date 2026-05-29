@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   ShieldCheck, 
   Activity, 
@@ -28,20 +29,20 @@ import { Button } from '@/components/ui/button';
 export function AboutPage() {
   const pillars = [
     {
-      title: 'Clinical Rigor',
-      description: 'Every caregiver undergoes 48 hours of ICU simulation testing and government database background sweeps before onboarding.',
+      title: 'care Rigor',
+      description: 'Every caregiver undergoes 48 hours of Specialized simulation testing and government database background sweeps before onboarding.',
       icon: Microscope,
       stats: '4.8% Acceptance Rate'
     },
     {
-      title: 'Smart Telemetry',
+      title: 'Smart monitoring',
       description: 'Proprietary monitoring algorithms analyze heart rate and sleep patterns to predict medical escalations before they happen.',
       icon: Activity,
       stats: '99.9% Prediction Accuracy'
     },
     {
       title: 'Global Compliance',
-      description: 'Our standardized clinical workflows are audited daily for reliability, transparency, and HIPAA-level privacy mandates.',
+      description: 'Our standardized care workflows are audited daily for reliability, transparency, and HIPAA-level privacy mandates.',
       icon: ShieldCheck,
       stats: 'Zero Breaches Since 2018'
     }
@@ -75,10 +76,10 @@ export function AboutPage() {
           </Badge>
           <h1 className="text-7xl lg:text-[130px] font-black text-slate-950 tracking-[-0.07em] leading-[0.8] mb-6">
             Precision care, <br />
-            <span className="text-slate-400 font-medium italic">industrialized.</span>
+            <span className="text-slate-400 font-medium italic">compassionate.</span>
           </h1>
           <p className="text-xl lg:text-3xl text-slate-500 leading-relaxed font-medium max-w-4xl mx-auto tracking-tight">
-            We are a clinical intelligence platform redefining how the world cares for its elderly. No compromises. Just standardized medical excellence.
+            We are a care intelligence platform redefining how the world cares for its elderly. No compromises. Just standardized compassionate care.
           </p>
         </motion.div>
         </div>
@@ -90,7 +91,7 @@ export function AboutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-4">
            <Badge className="bg-primary/5 text-primary border-primary/20 px-6 py-1.5 mb-8 text-[9px] font-black uppercase tracking-[0.4em] rounded-full">Core Principles</Badge>
-           <h2 className="text-4xl lg:text-5xl font-black text-slate-950 tracking-[-0.04em]">Our clinical foundation.</h2>
+           <h2 className="text-4xl lg:text-5xl font-black text-slate-950 tracking-[-0.04em]">Our care foundation.</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {pillars.map((p, i) => (
@@ -139,7 +140,7 @@ export function AboutPage() {
                  <Badge className="bg-rose-50 text-rose-600 mb-4 px-6 py-2 rounded-full font-black uppercase tracking-widest text-[10px]">The Human Element</Badge>
                  <h2 className="text-4xl lg:text-5xl font-black text-slate-950 tracking-tighter leading-[0.9] mb-6">care philosophy <br /><span className="text-slate-400 italic">rooted in empathy.</span></h2>
                  <p className="text-xl text-slate-700 font-medium leading-relaxed mb-6">
-                   At Care24, we believe that medical excellence is only half the battle. True healing happens when a patient feels seen, heard, and respected in their own home. Our philosophy merges rigorous clinical protocols with deep emotional intelligence.
+                   At Care24, we believe that compassionate care is only half the battle. True healing happens when a patient feels seen, heard, and respected in their own home. Our philosophy merges rigorous care protocols with deep emotional intelligence.
                  </p>
                  <div className="space-y-8">
                     {[
@@ -203,7 +204,7 @@ export function AboutPage() {
                      {[
                        { t: 'Verified Identity', d: 'Biometric multi-factor authentication for every caregiver visit.', icon: Database },
                        { t: 'Immutable Logs', d: 'Blockchain-inspired ledger for all vital signs and medication administration.', icon: Lock },
-                       { t: 'Instant Arbitration', d: 'Direct 24/7 access to clinical supervisors via high-priority audio links.', icon: Stethoscope }
+                       { t: 'Instant Arbitration', d: 'Direct 24/7 access to care supervisors via high-priority audio links.', icon: Stethoscope }
                      ].map((item, i) => (
                        <div key={i} className="flex gap-6 group">
                           <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary shrink-0 transition-transform group-hover:scale-110">
@@ -270,10 +271,10 @@ export function AboutPage() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_0%,transparent_100%)] pointer-events-none"></div>
             <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tight mb-6 relative z-10">Experience the <br />new standard.</h2>
             <div className="flex flex-col sm:flex-row justify-center gap-8 relative z-10">
-               <Button className="h-20 px-12 rounded-[28px] bg-white text-primary font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all">
+               <Button className="h-20 px-12 rounded-[28px] bg-white text-primary font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all" render={<Link to="/contact" />} nativeButton={false}>
                   BOOK CONSULTATION
                </Button>
-               <Button variant="outline" className="h-20 px-12 rounded-[28px] border-white/60 bg-white/10 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-white/20 active:scale-95 transition-all">
+               <Button variant="outline" className="h-20 px-12 rounded-[28px] border-white/60 bg-white/10 text-white font-black text-xs uppercase tracking-[0.2em] hover:bg-white/20 active:scale-95 transition-all" render={<Link to="/services" />} nativeButton={false}>
                   VIEW CASE STUDIES <ArrowRight className="ml-2 h-4 w-4" />
                </Button>
             </div>

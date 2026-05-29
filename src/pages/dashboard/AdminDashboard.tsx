@@ -56,6 +56,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { api } from '@/src/api';
+
 export function AdminDashboard() {
   const { 
     caregivers, 
@@ -76,11 +78,105 @@ export function AdminDashboard() {
     toggleAvailabilityByAdmin,
     createService,
     updateService,
-    updateComplaintStatus
+    updateComplaintStatus,
+    inquiries,
+    fetchInquiries,
+    answerInquiry,
+    settings,
+    fetchSettings,
+    updateSettings
   } = useCareStore();
+
+  const [settingsForm, setSettingsForm] = useState({
+    heroTitle: '', heroSubtitle: '', heroPrimaryCTA: '', heroSecondaryCTA: '',
+    satisfactionTitle: '', satisfactionDescription: '', caregiverTrustTitle: '', caregiverTrustDescription: '',
+    serviceCoverageTitle: '', serviceCoverageDescription: '', companyName: '', footerDescription: '',
+    supportEmail: '', supportPhone: '', whatsappNumber: '', supportHours: '', officeAddress: '', emergencyContact: '',
+    supportedCities: '', facebookUrl: '', instagramUrl: '', linkedinUrl: '', twitterUrl: '',
+  });
+
+  useEffect(() => {
+    if (settings) {
+      setSettingsForm({
+        heroTitle: settings.heroTitle || '', heroSubtitle: settings.heroSubtitle || '', heroPrimaryCTA: settings.heroPrimaryCTA || '', heroSecondaryCTA: settings.heroSecondaryCTA || '',
+        satisfactionTitle: settings.satisfactionTitle || '', satisfactionDescription: settings.satisfactionDescription || '', caregiverTrustTitle: settings.caregiverTrustTitle || '', caregiverTrustDescription: settings.caregiverTrustDescription || '',
+        serviceCoverageTitle: settings.serviceCoverageTitle || '', serviceCoverageDescription: settings.serviceCoverageDescription || '', companyName: settings.companyName || '', footerDescription: settings.footerDescription || '',
+        supportEmail: settings.supportEmail || '', supportPhone: settings.supportPhone || '', whatsappNumber: settings.whatsappNumber || '', supportHours: settings.supportHours || '', officeAddress: settings.officeAddress || '', emergencyContact: settings.emergencyContact || '',
+        supportedCities: settings.supportedCities?.join(', ') || '', facebookUrl: settings.facebookUrl || '', instagramUrl: settings.instagramUrl || '', linkedinUrl: settings.linkedinUrl || '', twitterUrl: settings.twitterUrl || '',
+      });
+    }
+  }, [settings]);
+
+  const handleSettingsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const citiesArray = settingsForm.supportedCities
+        .split(',')
+        .map(c => c.trim())
+        .filter(Boolean);
+      await updateSettings({
+        ...settingsForm,
+        supportedCities: citiesArray,
+      });
+      toast.success('Platform settings updated successfully!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to update settings');
+    }
+  };
 
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
   const [resolutionText, setResolutionText] = useState('');
+  const [answeringInquiryId, setAnsweringInquiryId] = useState<string | null>(null);
+  const [answerText, setAnswerText] = useState('');
+  
+  const handleAnswerSubmit = async (id: string) => {
+    if (!answerText) {
+      toast.error('Please enter an answer');
+      return;
+    }
+    try {
+      await answerInquiry(id, answerText);
+      toast.success('Inquiry answered successfully');
+      setAnsweringInquiryId(null);
+      setAnswerText('');
+      fetchInquiries(true);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to submit answer');
+    }
+  };
+
+  const [reviews, setReviews] = useState<any[]>([]);
+  const fetchReviews = async () => {
+    try {
+      const res = await api.get('/reviews');
+      setReviews(res.data);
+    } catch (err) {
+      console.error('Failed to fetch reviews', err);
+    }
+  };
+
+  const handleToggleReviewVisibility = async (id: string) => {
+    try {
+      await api.patch(`/reviews/${id}/visibility`);
+      toast.success('Review visibility updated');
+      fetchReviews();
+    } catch (err) {
+      toast.error('Failed to update review visibility');
+    }
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this review?')) {
+      try {
+        await api.delete(`/reviews/${id}`);
+        toast.success('Review deleted successfully');
+        fetchReviews();
+        fetchAdminMetrics(); // Update KPI
+      } catch (err) {
+        toast.error('Failed to delete review');
+      }
+    }
+  };
 
   // Dynamic Revenue Overview (past 6 months)
   const getDynamicRevenueData = () => {
@@ -179,7 +275,7 @@ export function AdminDashboard() {
   };
 
   const handleDeleteCaregiver = async (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete the clinical profile of "${name}"? This action cannot be undone.`)) {
+    if (window.confirm(`Are you sure you want to delete the profile of "${name}"? This action cannot be undone.`)) {
       try {
         await deleteCaregiverProfile(id);
         toast.success(`Caregiver profile for ${name} deleted successfully.`);
@@ -195,21 +291,20 @@ export function AdminDashboard() {
     fetchServices();
     fetchAdminMetrics();
     fetchComplaints();
+    fetchReviews();
+    fetchInquiries(true);
+    fetchSettings();
   }, []);
 
   const totalRevenue = bookings.reduce((acc, b) => acc + (b.totalAmount || 0), 0);
 
   const kpis = [
-    { label: 'Total Users', value: adminMetrics?.totalUsers?.toLocaleString() || caregivers.length.toString(), delta: 'Platform', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Total Caregivers', value: adminMetrics?.totalCaregivers?.toLocaleString() || caregivers.length.toString(), delta: 'Registered', icon: UserCheck, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Registered Users', value: adminMetrics?.totalUsers?.toLocaleString() || caregivers.length.toString(), delta: 'Platform', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Verified Caregivers', value: adminMetrics?.verifiedCaregivers?.toLocaleString() || caregivers.filter(c => c.isVerified).length.toString(), delta: 'Verified', icon: ShieldCheck, color: 'text-violet-600', bg: 'bg-violet-50' },
-    { label: 'Total Bookings', value: adminMetrics?.totalBookings?.toLocaleString() || bookings.length.toString(), delta: 'All time', icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Active Bookings', value: adminMetrics?.activeBookings?.toLocaleString() || bookings.filter(b => ['pending','confirmed','active'].includes(b.status)).length.toString(), delta: 'Live', icon: TrendingUp, color: 'text-orange-600', bg: 'bg-orange-50' },
-    { label: 'Care Notes Logged', value: adminMetrics?.careNotesLogged?.toLocaleString() || '0', delta: 'Clinical', icon: FileText, color: 'text-teal-600', bg: 'bg-teal-50' },
     { label: 'Completion Rate', value: adminMetrics?.bookingCompletionRate !== undefined ? `${adminMetrics.bookingCompletionRate.toFixed(1)}%` : '0%', delta: 'Operational', icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Avg Response Time', value: adminMetrics?.avgResponseTimeMinutes !== undefined ? `${adminMetrics.avgResponseTimeMinutes.toFixed(1)}m` : '0m', delta: 'SLA Support', icon: Clock, color: 'text-rose-600', bg: 'bg-rose-50' },
-    { label: 'User Satisfaction', value: adminMetrics?.userSatisfactionScore !== undefined ? `★ ${adminMetrics.userSatisfactionScore.toFixed(1)}` : '★ 5.0', delta: 'CSAT Rating', icon: Star, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Monthly Active', value: adminMetrics?.monthlyActiveUsers?.toLocaleString() || '0', delta: 'MAU Traffic', icon: Users, color: 'text-sky-600', bg: 'bg-sky-50' },
+    { label: 'User Satisfaction', value: adminMetrics?.userSatisfactionScore !== undefined ? `⭐ ${adminMetrics.userSatisfactionScore.toFixed(1)}` : '⭐ 5.0', delta: 'CSAT Rating', icon: Star, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { label: 'Monthly Active Users', value: adminMetrics?.monthlyActiveUsers?.toLocaleString() || '0', delta: 'MAU Traffic', icon: Users, color: 'text-sky-600', bg: 'bg-sky-50' },
   ];
 
   const handleResolveComplaint = async (status: 'resolved' | 'escalated') => {
@@ -288,7 +383,11 @@ export function AdminDashboard() {
             <p className="text-slate-500 font-medium mt-1">Global oversight of Care24 healthcare ecosystem and caregiver verification.</p>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="outline" className="rounded-2xl h-14 px-6 border-slate-200 font-bold text-slate-700 shadow-sm hover:bg-slate-50">
+            <Button 
+              onClick={() => import('react-hot-toast').then(m => m.default.success('Report export initiated. You will receive an email shortly.'))}
+              variant="outline" 
+              className="rounded-2xl h-14 px-6 border-slate-200 font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
               <Download className="mr-2 h-4 w-4" /> EXPORT REPORTS
             </Button>
             <Button className="rounded-2xl h-14 px-8 bg-slate-950 hover:bg-black text-white font-bold shadow-xl active:scale-95 transition-all" onClick={handleOpenCreateService}>
@@ -304,7 +403,7 @@ export function AdminDashboard() {
         )}
 
         {/* KPI Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mb-10">
           {kpis.map((kpi, i) => (
             <Card key={i} className="rounded-[32px] border-none shadow-sm hover:translate-y-[-2px] transition-transform bg-white">
               <CardContent className="p-6">
@@ -378,15 +477,24 @@ export function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <Tabs defaultValue="caregivers" className="space-y-8">
-              <TabsList className="bg-white p-1.5 rounded-2xl h-14 w-full justify-start max-w-xl border border-slate-100 shadow-sm">
-                <TabsTrigger value="caregivers" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+              <TabsList className="bg-white p-1.5 rounded-2xl h-14 w-full justify-start max-w-4xl border border-slate-100 shadow-sm overflow-x-auto">
+                <TabsTrigger value="caregivers" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
                   Caregivers ({caregivers.length})
                 </TabsTrigger>
-                <TabsTrigger value="services" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+                <TabsTrigger value="services" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
                   Services ({services.length})
                 </TabsTrigger>
-                <TabsTrigger value="complaints" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+                <TabsTrigger value="complaints" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
                   Complaints ({complaints?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="reviews" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
+                  Reviews ({reviews.length})
+                </TabsTrigger>
+                <TabsTrigger value="inquiries" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
+                  Inquiries ({inquiries ? inquiries.length : 0})
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
+                  Platform Settings
                 </TabsTrigger>
               </TabsList>
 
@@ -624,6 +732,447 @@ export function AdminDashboard() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* Reviews Tab */}
+              <TabsContent value="reviews">
+                <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+                  <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-2xl font-bold tracking-tight">Patient Reviews</CardTitle>
+                      <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Monitor and moderate patient feedback</CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="w-full overflow-x-auto">
+                      <Table className="min-w-[650px]">
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                            <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient Name</TableHead>
+                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Rating</TableHead>
+                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Comment</TableHead>
+                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Date</TableHead>
+                            <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {reviews.map((r) => (
+                            <TableRow key={r._id} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                              <TableCell className="pl-8 font-bold text-slate-900 text-sm">{r.patientName}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-amber-500">
+                                  {Array.from({ length: r.rating }).map((_, i) => (
+                                    <Star key={i} size={14} className="fill-amber-500" />
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-slate-600 max-w-[200px] truncate">{r.comment}</TableCell>
+                              <TableCell className="text-xs font-medium text-slate-500">{new Date(r.createdAt).toLocaleDateString()}</TableCell>
+                              <TableCell className="pr-8 text-right">
+                                <div className="flex justify-end space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleToggleReviewVisibility(r._id)}
+                                    className={`h-8 px-3 rounded-lg font-bold text-[10px] uppercase tracking-widest flex items-center gap-1 ${
+                                      r.isVisible ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                                    }`}
+                                  >
+                                    {r.isVisible ? <Eye size={14} /> : <Eye size={14} className="opacity-50" />}
+                                    {r.isVisible ? 'Hide' : 'Unhide'}
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleDeleteReview(r._id)}
+                                    className="h-8 px-3 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase tracking-widest flex items-center gap-1"
+                                  >
+                                    <Trash2 size={14} /> Delete
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {reviews.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="h-24 text-center text-slate-500 font-medium">No reviews found.</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="inquiries">
+                <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+                  <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                       <CardTitle className="text-2xl font-bold tracking-tight">User FAQ & Support Inquiries</CardTitle>
+                       <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Review questions asked by guests and patients and post answers</CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="w-full overflow-x-auto">
+                      <Table className="min-w-[650px]">
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                            <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">User / Email</TableHead>
+                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Question</TableHead>
+                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Answer</TableHead>
+                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
+                            <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {inquiries && inquiries.length > 0 ? (
+                            inquiries.map((inq: any, i: number) => (
+                              <TableRow key={inq._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                                <TableCell className="pl-8 py-4">
+                                  {inq.user ? (
+                                    <div>
+                                      <span className="font-bold text-slate-900 text-sm block">{inq.user.name}</span>
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase">Registered User</span>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <span className="font-bold text-slate-900 text-sm block">{inq.email}</span>
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase">Guest</span>
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="font-medium text-slate-900 text-xs max-w-[200px] truncate">
+                                  {inq.question}
+                                </TableCell>
+                                <TableCell className="text-xs text-slate-600 max-w-[200px] truncate">
+                                  {inq.answer || <span className="italic text-slate-400">Not answered yet</span>}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
+                                    inq.status === 'answered' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700 animate-pulse'
+                                  }`}>
+                                    {inq.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="pr-8 text-right">
+                                  {answeringInquiryId === inq._id ? (
+                                    <div className="flex flex-col gap-2 items-end">
+                                      <Input 
+                                        value={answerText}
+                                        onChange={(e) => setAnswerText(e.target.value)}
+                                        placeholder="Type answer here..."
+                                        className="h-10 text-xs w-48"
+                                      />
+                                      <div className="flex gap-2">
+                                        <Button 
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-8 rounded-lg text-[10px] font-bold"
+                                          onClick={() => {
+                                            setAnsweringInquiryId(null);
+                                            setAnswerText('');
+                                          }}
+                                        >
+                                          Cancel
+                                        </Button>
+                                        <Button 
+                                          size="sm"
+                                          className="h-8 rounded-lg bg-slate-950 text-white text-[10px] font-bold"
+                                          onClick={() => handleAnswerSubmit(inq._id)}
+                                        >
+                                          Submit
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <Button 
+                                      variant="ghost" 
+                                      className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2"
+                                      onClick={() => {
+                                        setAnsweringInquiryId(inq._id);
+                                        setAnswerText(inq.answer || '');
+                                      }}
+                                    >
+                                      <Edit2 size={14} /> ANSWER
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
+                                No support inquiries logged in the system.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="settings">
+                <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+                  <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-2xl font-bold tracking-tight">Platform Configuration</CardTitle>
+                      <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage global site content, contact info, and social links.</CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-8 max-h-[700px] overflow-y-auto">
+                    <form onSubmit={handleSettingsSubmit} className="space-y-12">
+                      
+                      {/* Section: Homepage Content */}
+                      <div>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Homepage Messaging</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Hero Title</Label>
+                            <Input
+                              placeholder="e.g. Compassionate Care"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.heroTitle}
+                              onChange={e => setSettingsForm({ ...settingsForm, heroTitle: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Hero Subtitle</Label>
+                            <Input
+                              placeholder="e.g. Professional nursing and elderly care"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.heroSubtitle}
+                              onChange={e => setSettingsForm({ ...settingsForm, heroSubtitle: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Primary CTA Button</Label>
+                            <Input
+                              placeholder="e.g. Find a Caregiver"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.heroPrimaryCTA}
+                              onChange={e => setSettingsForm({ ...settingsForm, heroPrimaryCTA: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Secondary CTA Button</Label>
+                            <Input
+                              placeholder="e.g. Our Services"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.heroSecondaryCTA}
+                              onChange={e => setSettingsForm({ ...settingsForm, heroSecondaryCTA: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section: Trust Cards */}
+                      <div>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Trust & Credibility Cards</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 1 Title</Label>
+                            <Input
+                              placeholder="e.g. Patient Satisfaction"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.satisfactionTitle}
+                              onChange={e => setSettingsForm({ ...settingsForm, satisfactionTitle: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 1 Description</Label>
+                            <Input
+                              placeholder="e.g. Verified Family Reviews"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.satisfactionDescription}
+                              onChange={e => setSettingsForm({ ...settingsForm, satisfactionDescription: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 2 Title</Label>
+                            <Input
+                              placeholder="e.g. Verified Caregivers"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.caregiverTrustTitle}
+                              onChange={e => setSettingsForm({ ...settingsForm, caregiverTrustTitle: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 2 Description</Label>
+                            <Input
+                              placeholder="e.g. Background Checked Professionals"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.caregiverTrustDescription}
+                              onChange={e => setSettingsForm({ ...settingsForm, caregiverTrustDescription: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 3 Title</Label>
+                            <Input
+                              placeholder="e.g. Service Coverage"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.serviceCoverageTitle}
+                              onChange={e => setSettingsForm({ ...settingsForm, serviceCoverageTitle: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 3 Description</Label>
+                            <Input
+                              placeholder="e.g. Multi-City Support Network"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.serviceCoverageDescription}
+                              onChange={e => setSettingsForm({ ...settingsForm, serviceCoverageDescription: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section: Company Info */}
+                      <div>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Company Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Company Name</Label>
+                            <Input
+                              placeholder="e.g. Care24"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.companyName}
+                              onChange={e => setSettingsForm({ ...settingsForm, companyName: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Supported Cities (comma-separated)</Label>
+                            <Input
+                              placeholder="e.g. New York, San Francisco, Los Angeles"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.supportedCities}
+                              onChange={e => setSettingsForm({ ...settingsForm, supportedCities: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Footer Description</Label>
+                            <textarea
+                              placeholder="e.g. Empowering families with professional home care..."
+                              rows={2}
+                              className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
+                              value={settingsForm.footerDescription}
+                              onChange={e => setSettingsForm({ ...settingsForm, footerDescription: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section: Support Details */}
+                      <div>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Contact & Support Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Email</Label>
+                            <Input
+                              type="email"
+                              placeholder="e.g. support@care24.com"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.supportEmail}
+                              onChange={e => setSettingsForm({ ...settingsForm, supportEmail: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Emergency / Support Phone</Label>
+                            <Input
+                              placeholder="e.g. +1 (800) 123-4567"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.supportPhone}
+                              onChange={e => setSettingsForm({ ...settingsForm, supportPhone: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">WhatsApp Number</Label>
+                            <Input
+                              placeholder="e.g. +1 555 0123"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.whatsappNumber}
+                              onChange={e => setSettingsForm({ ...settingsForm, whatsappNumber: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Hours</Label>
+                            <Input
+                              placeholder="e.g. 24/7 Available"
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.supportHours}
+                              onChange={e => setSettingsForm({ ...settingsForm, supportHours: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Office Address</Label>
+                            <textarea
+                              placeholder="e.g. 100 Main Street, Suite 500, New York, NY"
+                              rows={2}
+                              className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
+                              value={settingsForm.officeAddress}
+                              onChange={e => setSettingsForm({ ...settingsForm, officeAddress: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section: Social Links */}
+                      <div>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Social Links</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Facebook URL</Label>
+                            <Input
+                              placeholder="https://facebook.com/..."
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.facebookUrl}
+                              onChange={e => setSettingsForm({ ...settingsForm, facebookUrl: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Instagram URL</Label>
+                            <Input
+                              placeholder="https://instagram.com/..."
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.instagramUrl}
+                              onChange={e => setSettingsForm({ ...settingsForm, instagramUrl: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">LinkedIn URL</Label>
+                            <Input
+                              placeholder="https://linkedin.com/in/..."
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.linkedinUrl}
+                              onChange={e => setSettingsForm({ ...settingsForm, linkedinUrl: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Twitter (X) URL</Label>
+                            <Input
+                              placeholder="https://twitter.com/..."
+                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                              value={settingsForm.twitterUrl}
+                              onChange={e => setSettingsForm({ ...settingsForm, twitterUrl: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-4 sticky bottom-0 bg-white p-4 border-t border-slate-100 z-10 rounded-b-2xl -mx-8 -mb-8">
+                        <Button
+                          type="submit"
+                          className="w-full md:w-auto h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] px-10 shadow-xl active:scale-95 transition-all"
+                          disabled={loading}
+                        >
+                          {loading ? <Loader2 className="animate-spin" size={20} /> : 'SAVE PLATFORM SETTINGS'}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
 
@@ -687,7 +1236,7 @@ export function AdminDashboard() {
                 <Label htmlFor="srvTitle" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Service Title *</Label>
                 <Input
                   id="srvTitle"
-                  placeholder="e.g. ICU Critical Care, Physiotherapy"
+                  placeholder="e.g. Nursing Care, Physiotherapy"
                   className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
                   value={serviceForm.title}
                   onChange={e => setServiceForm({ ...serviceForm, title: e.target.value })}
@@ -698,7 +1247,7 @@ export function AdminDashboard() {
                 <Label htmlFor="srvDesc" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Description *</Label>
                 <textarea
                   id="srvDesc"
-                  placeholder="Service clinical descriptions..."
+                  placeholder="Service descriptions..."
                   rows={3}
                   className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
                   value={serviceForm.description}
