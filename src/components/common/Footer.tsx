@@ -38,8 +38,8 @@ export function Footer() {
       {/* Refined Decorative Blur */}
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[140px] -translate-y-1/3 translate-x-1/3 pointer-events-none"></div>
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-36 lg:py-24 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 md:gap-24">
           {/* Brand Identity */}
           <div className="space-y-8">
             <Link to="/" className="flex items-center space-x-5 group">
@@ -133,22 +133,22 @@ export function Footer() {
                 </div>
               )}
               {settings?.supportPhone && (
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
+                <a href={`tel:${settings.supportPhone.replace(/[^\d+]/g, '')}`} className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all w-full">
                   <Phone size={18} className="text-primary shrink-0 mt-0.5" />
                   <div>
-                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Support Phone</p>
-                     <a href={`tel:${settings.supportPhone.replace(/[^\d+]/g, '')}`} className="text-xs font-bold text-slate-300 hover:text-white transition-colors">{settings.supportPhone}</a>
+                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5 group-hover:text-primary/70 transition-colors">Support Phone</p>
+                     <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{settings.supportPhone}</span>
                   </div>
-                </div>
+                </a>
               )}
               {settings?.supportEmail && (
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
+                <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${settings.supportEmail}`} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all w-full">
                   <Mail size={18} className="text-primary shrink-0 mt-0.5" />
                   <div>
-                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Support Email</p>
-                     <a href={`mailto:${settings.supportEmail}`} className="text-xs font-bold text-slate-300 hover:text-white transition-colors">{settings.supportEmail}</a>
+                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5 group-hover:text-primary/70 transition-colors">Support Email</p>
+                     <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{settings.supportEmail}</span>
                   </div>
-                </div>
+                </a>
               )}
               <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
                 <Globe size={18} className="text-primary shrink-0 mt-0.5" />
@@ -166,8 +166,8 @@ export function Footer() {
         </div>
 
         {/* Legal & Compliance Footer */}
-        <div className="border-t border-white/5 mt-32 pt-16">
-           <div className="flex flex-col lg:flex-row justify-between items-center gap-12">
+        <div className="border-t border-white/5 mt-16 md:mt-32 pt-8 md:pt-16">
+           <div className="flex flex-col lg:flex-row justify-between items-center gap-8 md:gap-12">
               <div className="flex flex-col items-center lg:items-start gap-2">
                  <p className="text-sm font-black text-white tracking-tight">© 2026 Care24</p>
               </div>

@@ -28,7 +28,8 @@ import {
   Clock,
   Star,
   Settings,
-  Activity
+  Activity,
+  User
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -47,7 +48,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCareStore, ServiceCategory } from '../../stores/careStore';
+import { useCareStore, ServiceCategory, Complaint } from '../../stores/careStore';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../store';
 import {
@@ -133,8 +134,9 @@ export function AdminDashboard() {
     }
   };
 
-  const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
+  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
   const [resolutionText, setResolutionText] = useState('');
+  const [caregiverWarningText, setCaregiverWarningText] = useState('');
   const [answeringInquiryId, setAnsweringInquiryId] = useState<string | null>(null);
   const [answerText, setAnswerText] = useState('');
   
@@ -342,10 +344,11 @@ export function AdminDashboard() {
   const handleResolveComplaint = async (status: 'resolved' | 'escalated') => {
     if (!selectedComplaint) return;
     try {
-      await updateComplaintStatus(selectedComplaint._id, status, resolutionText);
+      await updateComplaintStatus(selectedComplaint._id, status, resolutionText, caregiverWarningText);
       toast.success(`Complaint marked as ${status}`);
       setSelectedComplaint(null);
       setResolutionText('');
+      setCaregiverWarningText('');
       fetchComplaints();
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Failed to update complaint');
@@ -450,8 +453,10 @@ export function AdminDashboard() {
                       <TableCell className="pl-8 py-4">
                         <div className="flex items-center space-x-4">
                           <Avatar className="h-12 w-12 border-2 border-white shadow-md rounded-2xl overflow-hidden">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${cg.name}`} />
-                            <AvatarFallback>{cg.name[0]}</AvatarFallback>
+                            <AvatarImage src={cg.imageUrl || ''} className="object-cover" />
+                            <AvatarFallback className="bg-[#dfe5e7]">
+                               <User className="w-full h-full text-white fill-white translate-y-1/4 scale-125" />
+                            </AvatarFallback>
                           </Avatar>
                           <div>
                             <span className="font-bold text-slate-900 text-sm block">{cg.name}</span>
@@ -566,8 +571,10 @@ export function AdminDashboard() {
                       <TableCell className="pl-8 py-4">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-10 w-10 border shadow-md rounded-xl">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`} />
-                            <AvatarFallback>{u.name?.[0] || '?'}</AvatarFallback>
+                            <AvatarImage src={u.imageUrl || ''} className="object-cover" />
+                            <AvatarFallback className="bg-[#dfe5e7]">
+                               <User className="w-full h-full text-white fill-white translate-y-1/4 scale-125" />
+                            </AvatarFallback>
                           </Avatar>
                           <span className="font-bold text-slate-900 text-sm">{u.name || 'Unknown'}</span>
                         </div>
@@ -700,10 +707,11 @@ export function AdminDashboard() {
             <Table className="min-w-[650px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
-                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient</TableHead>
-                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver / Service</TableHead>
-                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Issue Subject</TableHead>
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Complaint Title</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Issue Description</TableHead>
                   <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Resolution Type</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Date Submitted</TableHead>
                   <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -711,25 +719,11 @@ export function AdminDashboard() {
                 {complaints && complaints.length > 0 ? (
                   complaints.map((c: any, i: number) => (
                     <TableRow key={c._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
-                      <TableCell className="pl-8 py-4">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10 border shadow-md rounded-xl">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${c.patient?.name}`} />
-                            <AvatarFallback>{c.patient?.name?.[0]}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <span className="font-bold text-slate-900 text-sm block">{c.patient?.name}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase text-[9px]">Age: {c.patient?.age || 'N/A'}</span>
-                          </div>
-                        </div>
+                      <TableCell className="pl-8 py-4 font-bold text-slate-900 text-sm">
+                        {c.title}
                       </TableCell>
-                      <TableCell>
-                        <span className="font-bold text-slate-800 text-sm block">{c.caregiver?.name || 'Unassigned'}</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase text-[9px]">{c.booking?.service?.title || 'Care Modality'}</span>
-                      </TableCell>
-                      <TableCell className="font-medium text-slate-900 text-xs max-w-[200px] truncate">
-                        <div className="font-bold text-slate-900 mb-0.5">{c.title}</div>
-                        <div className="text-slate-500 text-[10px] font-medium truncate">{c.description}</div>
+                      <TableCell className="font-medium text-slate-600 text-xs max-w-[200px] truncate">
+                        {c.description}
                       </TableCell>
                       <TableCell>
                         <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
@@ -740,6 +734,18 @@ export function AdminDashboard() {
                           {c.status}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
+                          c.resolutionType === 'Resolved' ? 'bg-emerald-100 text-emerald-700' :
+                          c.resolutionType === 'Escalated' ? 'bg-rose-100 text-rose-700' :
+                          'bg-slate-100 text-slate-700'
+                        }`}>
+                          {c.resolutionType || 'Open'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-500 text-xs">
+                        {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'N/A'}
+                      </TableCell>
                       <TableCell className="pr-8 text-right">
                         <Button 
                           variant="ghost" 
@@ -747,9 +753,10 @@ export function AdminDashboard() {
                           onClick={() => {
                             setSelectedComplaint(c);
                             setResolutionText(c.resolution || '');
+                            setCaregiverWarningText(c.caregiverWarning || '');
                           }}
                         >
-                          <Edit2 size={14} /> REVIEW
+                          <Edit2 size={14} /> MANAGE
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -1778,8 +1785,10 @@ export function AdminDashboard() {
 
             <div className="flex flex-col items-center text-center pb-6 border-b border-slate-100 mb-6">
               <Avatar className="h-24 w-24 border-4 border-slate-100 shadow-xl rounded-[32px] overflow-hidden mb-4">
-                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedCaregiverForDetails.name}`} />
-                <AvatarFallback>{selectedCaregiverForDetails.name?.[0]}</AvatarFallback>
+                <AvatarImage src={selectedCaregiverForDetails.imageUrl || ''} className="object-cover" />
+                <AvatarFallback className="bg-[#dfe5e7]">
+                   <User className="w-full h-full text-white fill-white translate-y-1/4 scale-125" />
+                </AvatarFallback>
               </Avatar>
               <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{selectedCaregiverForDetails.name}</h3>
               <p className="text-sm font-semibold text-primary/80 uppercase tracking-widest mt-1">{selectedCaregiverForDetails.title}</p>
@@ -1898,7 +1907,7 @@ export function AdminDashboard() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Resolve Complaint/Dispute</h3>
-                <p className="text-xs text-slate-400 font-medium mt-1">Review complaint details, enter resolution notes, and resolve/escalate.</p>
+                <p className="text-xs text-slate-400 font-medium mt-1">Examine complaint details, enter resolution notes, and resolve/escalate.</p>
               </div>
             </div>
 
@@ -1923,15 +1932,27 @@ export function AdminDashboard() {
               </div>
             </div>
 
-            <div className="space-y-2 mb-6">
-              <Label htmlFor="resolution" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Resolution Notes *</Label>
+            <div className="space-y-2 mb-4">
+              <Label htmlFor="resolution" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Message to Patient *</Label>
               <textarea
                 id="resolution"
-                placeholder="Enter final resolution or escalation details..."
+                placeholder="Enter final resolution or escalation details to notify the patient..."
                 rows={3}
                 className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
                 value={resolutionText}
                 onChange={e => setResolutionText(e.target.value)}
+              ></textarea>
+            </div>
+
+            <div className="space-y-2 mb-6">
+              <Label htmlFor="caregiverWarning" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Warning / Notice to Caregiver (Optional)</Label>
+              <textarea
+                id="caregiverWarning"
+                placeholder="Enter a warning or notice to the caregiver. Leave empty if no action is required."
+                rows={2}
+                className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none resize-none transition-all focus:border-amber-500/20"
+                value={caregiverWarningText}
+                onChange={e => setCaregiverWarningText(e.target.value)}
               ></textarea>
             </div>
 

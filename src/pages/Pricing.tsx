@@ -141,9 +141,9 @@ export function PricingPage() {
                     <p className={`text-sm font-medium ${plan.popular ? 'text-slate-400' : 'text-slate-500'}`}>{plan.tagline}</p>
                  </div>
 
-                  <div className="mb-6 flex flex-col items-start gap-1">
-                     <span className="text-3xl font-black tracking-[-0.03em]">{plan.price}</span>
-                     <span className={`text-[9px] font-black uppercase tracking-[0.15em] ${plan.popular ? 'text-slate-400' : 'text-slate-500'}`}>{plan.unit}</span>
+                  <div className="mb-6 flex flex-col items-start gap-2">
+                     <span className="text-3xl font-black tracking-[-0.03em] leading-none">{plan.price}</span>
+                     <span className={`text-[10px] sm:text-xs font-black uppercase tracking-[0.1em] ${plan.popular ? 'text-slate-200' : 'text-slate-700'} whitespace-normal break-words w-full`}>{plan.unit}</span>
                   </div>
 
                  <div className="space-y-4 mb-8 flex-grow">
@@ -160,7 +160,7 @@ export function PricingPage() {
                   <Button 
                     render={<Link to="/contact" className="w-full" />}
                     nativeButton={false}
-                    className={`h-20 w-full rounded-[28px] font-black text-xs uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all ${plan.popular ? 'bg-white text-slate-950 hover:bg-slate-100' : 'bg-slate-950 text-white hover:bg-slate-900 border-none'}`}
+                    className={`h-auto min-h-[5rem] w-full rounded-[28px] py-4 px-6 font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-2xl active:scale-95 transition-all flex items-center justify-center text-center whitespace-normal leading-tight ${plan.popular ? 'bg-white text-slate-950 hover:bg-slate-100' : 'bg-slate-950 text-white hover:bg-slate-900 border-none'}`}
                    >
                       {plan.cta}
                   </Button>
@@ -222,10 +222,10 @@ export function PricingPage() {
                </div>
                <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 blur-[120px] rounded-full"></div>
-                  <div className="relative rounded-[60px] border border-white/10 overflow-hidden shadow-4xl aspect-square bg-slate-900 flex items-center justify-center p-20 group">
+                  <div className="relative rounded-[40px] sm:rounded-[60px] border border-white/10 overflow-hidden shadow-4xl aspect-auto lg:aspect-square bg-slate-900 flex items-center justify-center p-8 py-16 sm:p-12 lg:p-20 group">
                      <div className="text-center">
-                        <div className="w-32 h-32 rounded-[40px] bg-primary mx-auto mb-4 flex items-center justify-center shadow-3xl shadow-primary/20 group-hover:scale-110 transition-transform duration-700">
-                           <Award size={64} className="text-white" />
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[32px] sm:rounded-[40px] bg-primary mx-auto mb-6 flex items-center justify-center shadow-3xl shadow-primary/20 group-hover:scale-110 transition-transform duration-700">
+                           <Award size={48} className="text-white sm:w-16 sm:h-16" />
                         </div>
                         <p className="text-xs font-black uppercase tracking-[0.4em] text-slate-500 mb-2">Quality Standards</p>
                         <h3 className="text-3xl font-black mb-8">Trusted Care Standards</h3>

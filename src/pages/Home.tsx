@@ -252,11 +252,11 @@ export function HomePage() {
                 {settings?.heroSubtitle || "Connect with verified caregivers, nurses, physiotherapists, and attendants who provide safe, reliable, and compassionate home healthcare services for your loved ones."}
               </p>
               
-              <div className="flex flex-wrap items-center gap-6 mb-16">
-                <Button className="bg-primary hover:bg-blue-600 text-white rounded-[20px] px-10 h-16 font-black text-xs uppercase tracking-widest shadow-[0_20px_40px_rgba(37,99,235,0.3)] active:scale-95 transition-all" render={<Link to="/signup" />} nativeButton={false}>
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-16">
+                <Button className="bg-primary hover:bg-blue-600 text-white rounded-[20px] px-10 h-16 font-black text-xs uppercase tracking-widest shadow-[0_20px_40px_rgba(37,99,235,0.3)] active:scale-95 transition-all w-full sm:w-auto" render={<Link to="/signup" />} nativeButton={false}>
                   {settings?.heroPrimaryCTA || "Book a Service"} <ArrowRight className="ml-3 h-5 w-5" />
                 </Button>
-                <Button variant="outline" className="rounded-[20px] px-10 h-16 font-black text-xs uppercase tracking-widest border-slate-200 text-slate-600 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition-all" render={<Link to="/services" />} nativeButton={false}>
+                <Button variant="outline" className="rounded-[20px] px-10 h-16 font-black text-xs uppercase tracking-widest border-slate-200 text-slate-600 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition-all w-full sm:w-auto" render={<Link to="/services" />} nativeButton={false}>
                   {settings?.heroSecondaryCTA || "Explore Services"} <ArrowRight className="ml-3 h-5 w-5" />
                 </Button>
               </div>

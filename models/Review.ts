@@ -6,6 +6,16 @@ const reviewSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  caregiver: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Caregiver',
+    required: true,
+  },
+  booking: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Booking',
+    required: true,
+  },
   patientName: {
     type: String,
     required: true,

@@ -31,7 +31,8 @@ import {
   Edit2,
   Languages,
   BookOpen,
-  Phone
+  Phone,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -148,6 +149,12 @@ export function UserDashboard() {
 
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
   const [complaintBookingId, setComplaintBookingId] = useState('');
+
+  // Review State
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [complaintTitle, setComplaintTitle] = useState('');
   const [complaintDesc, setComplaintDesc] = useState('');
   const [complaintSuccess, setComplaintSuccess] = useState(false);
@@ -449,6 +456,32 @@ export function UserDashboard() {
     return { text: 'Stable', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
   };
 
+  const handleSubmitReview = async () => {
+    if (!reviewComment.trim()) {
+      toast.error('Please enter a review comment');
+      return;
+    }
+    try {
+      setIsSubmittingReview(true);
+      await api.post('/reviews', {
+        patientName: user?.name || patient?.name,
+        rating: reviewRating,
+        comment: reviewComment,
+        bookingId: bookings[0]?._id,
+        caregiverId: bookings[0]?.caregiver?._id
+      });
+      toast.success('Thank you! Your review has been submitted.');
+      setIsReviewModalOpen(false);
+      setReviewComment('');
+      setReviewRating(5);
+      await fetchBookings();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   const activeBooking = bookings[0];
   const upcomingVisits = bookings.filter((b: any) => ['pending', 'confirmed', 'active'].includes(b?.status));
   
@@ -630,8 +663,12 @@ export function UserDashboard() {
                   {/* Left Column: Avatar & Basic Details */}
                   <div className="flex flex-col sm:flex-row lg:flex-col items-center gap-6 shrink-0 lg:w-48 text-center sm:text-left lg:text-center">
                     <div className="relative">
-                      <div className="w-28 h-28 rounded-[36px] bg-slate-50 border-4 border-white shadow-2xl overflow-hidden">
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${patientName}`} alt="Patient Avatar" />
+                      <div className="w-28 h-28 rounded-[36px] bg-[#dfe5e7] border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center">
+                         {(user as any)?.imageUrl ? (
+                            <img src={(user as any).imageUrl} alt="Patient Avatar" className="w-full h-full object-cover" />
+                         ) : (
+                            <User className="w-full h-full text-white fill-white translate-y-1/4 scale-125" />
+                         )}
                       </div>
                       <div className={`absolute -bottom-1 -right-1 ${
                         activeBooking?.status === 'pending' ? 'bg-amber-500' :
@@ -870,6 +907,21 @@ export function UserDashboard() {
                      </div>
                   </div>
                   <div className="flex items-center gap-3">
+                      {activeBooking?.status === 'completed' && (
+                        <Button
+                          variant="ghost"
+                          className={`h-12 px-6 rounded-xl font-black text-[10px] tracking-widest flex items-center gap-2 ${
+                            activeBooking?.isReviewed 
+                              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' 
+                              : 'bg-amber-500/10 border border-amber-500/20 text-amber-500 hover:bg-amber-500/20'
+                          }`}
+                          onClick={() => !activeBooking?.isReviewed && setIsReviewModalOpen(true)}
+                          disabled={activeBooking?.isReviewed}
+                        >
+                          <Star size={14} className={activeBooking?.isReviewed ? "fill-slate-400" : "fill-amber-500"} /> 
+                          {activeBooking?.isReviewed ? 'REVIEW SUBMITTED' : 'REVIEW CAREGIVER'}
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         className="h-12 px-6 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 font-black text-[10px] tracking-widest flex items-center gap-2"
@@ -920,8 +972,9 @@ export function UserDashboard() {
                      "Completed"
                    ].map((stepLabel, idx) => {
                      const currentStep = getServiceStatusStep(activeBooking.status);
-                     const isCompleted = idx < currentStep;
-                     const isActive = idx === currentStep;
+                     const isFullyCompleted = activeBooking.status === 'completed';
+                     const isCompleted = isFullyCompleted || idx < currentStep;
+                     const isActive = !isFullyCompleted && idx === currentStep;
                      
                      return (
                        <div key={idx} className="flex md:flex-col items-center gap-4 md:gap-3 flex-1 relative z-10 w-full md:w-auto">
@@ -2136,6 +2189,79 @@ export function UserDashboard() {
                   </div>
                 </form>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isReviewModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              className="bg-white rounded-[40px] shadow-2xl max-w-lg w-full p-8 relative border border-slate-100"
+            >
+              <button 
+                onClick={() => setIsReviewModalOpen(false)} 
+                className="absolute top-6 right-6 w-10 h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center font-bold">
+                  <Star size={24} className="fill-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Review Caregiver</h3>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Rate your experience and leave a review.</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-2 block">Rating</Label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setReviewRating(reviewRating === star ? 0 : star)}
+                        className={`p-2 rounded-xl transition-all ${reviewRating >= star ? 'bg-amber-100 text-amber-500' : 'bg-slate-50 text-slate-300 hover:bg-slate-100'}`}
+                      >
+                        <Star size={32} className={reviewRating >= star ? "fill-amber-500" : ""} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="reviewComment" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Review Comment *</Label>
+                  <textarea 
+                    id="reviewComment"
+                    value={reviewComment} 
+                    onChange={(e) => setReviewComment(e.target.value)} 
+                    rows={4} 
+                    placeholder="How was the care provided? Any specific feedback?"
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all resize-none mt-2"
+                  ></textarea>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button onClick={handleSubmitReview} disabled={isSubmittingReview} className="flex-1 h-14 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs uppercase tracking-widest active:scale-95 transition-all">
+                    {isSubmittingReview ? <Loader2 size={16} className="animate-spin" /> : 'SUBMIT REVIEW'}
+                  </Button>
+                  <Button variant="outline" className="flex-1 h-14 rounded-2xl font-bold text-xs uppercase tracking-widest text-slate-600" onClick={() => setIsReviewModalOpen(false)}>
+                    CANCEL
+                  </Button>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}

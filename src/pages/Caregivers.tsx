@@ -48,9 +48,10 @@ export function CaregiversPage() {
   }, [caregivers]);
  
   const averageRating = React.useMemo(() => {
-    if (verifiedCaregivers.length === 0) return null;
-    const sum = verifiedCaregivers.reduce((acc, cg) => acc + (cg.rating || 5.0), 0);
-    return (sum / verifiedCaregivers.length).toFixed(1);
+    const reviewedCaregivers = verifiedCaregivers.filter(cg => cg.reviewCount && cg.reviewCount > 0);
+    if (reviewedCaregivers.length === 0) return null;
+    const sum = reviewedCaregivers.reduce((acc, cg) => acc + cg.rating, 0);
+    return (sum / reviewedCaregivers.length).toFixed(1);
   }, [verifiedCaregivers]);
 
   React.useEffect(() => {
@@ -260,10 +261,19 @@ export function CaregiversPage() {
                            <div>
                              <div className="flex items-center justify-between mb-4">
                                <div className="flex items-center gap-1">
-                                  {[1, 2, 3, 4, 5].map(s => (
-                                    <Star key={s} size={12} className={s <= Math.floor(caregiver.rating || 5.0) ? "fill-yellow-400 text-yellow-500" : "text-slate-200"} />
-                                  ))}
-                                  <span className="text-xs font-bold text-slate-950 ml-1">{caregiver.rating || 5.0}</span>
+                                  {caregiver.reviewCount && caregiver.reviewCount > 0 ? (
+                                    <>
+                                      {[1, 2, 3, 4, 5].map(s => (
+                                        <Star key={s} size={12} className={s <= Math.floor(caregiver.rating || 5.0) ? "fill-yellow-400 text-yellow-500" : "text-slate-200"} />
+                                      ))}
+                                      <span className="text-xs font-bold text-slate-950 ml-1">{caregiver.rating || 5.0}</span>
+                                      <span className="text-[10px] font-bold text-slate-400 ml-1">
+                                        ({caregiver.reviewCount} Reviews)
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-slate-400 italic">No ratings yet</span>
+                                  )}
                                </div>
                                <Badge className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
                                   caregiver.availability ? 'bg-emerald-50 text-emerald-700 border-none shadow-sm' : 'bg-slate-100 text-slate-500 border-none'

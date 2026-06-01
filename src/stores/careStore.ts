@@ -182,7 +182,7 @@ interface CareStoreState {
   // Complaints
   fetchComplaints: () => Promise<void>;
   submitComplaint: (data: Partial<Complaint>) => Promise<void>;
-  updateComplaintStatus: (id: string, status: string, resolution?: string) => Promise<void>;
+  updateComplaintStatus: (id: string, status: string, adminMessageToPatient?: string, adminWarningToCaregiver?: string) => Promise<void>;
   // Notifications
   fetchNotifications: () => Promise<void>;
   fetchUnreadNotificationCount: () => Promise<void>;
@@ -553,10 +553,10 @@ export const useCareStore = create<CareStoreState>((set) => ({
     }
   },
 
-  updateComplaintStatus: async (id, status, resolution) => {
+  updateComplaintStatus: async (id, status, adminMessageToPatient, adminWarningToCaregiver) => {
     set({ loading: true, error: null });
     try {
-      const res = await api.put(`/complaints/${id}`, { status, resolution });
+      const res = await api.put(`/complaints/${id}`, { status, adminMessageToPatient, adminWarningToCaregiver });
       set((state) => ({
         complaints: state.complaints.map((c) => (c._id === id ? res.data : c)),
         loading: false,

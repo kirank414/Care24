@@ -126,8 +126,8 @@ export function CaregiverDashboard() {
                     {caregiver?.imageUrl ? (
                       <img src={caregiver.imageUrl} alt="Caregiver" className="w-full h-full object-cover rounded-[24px] sm:rounded-[32px]" />
                     ) : (
-                      <div className="w-full h-full bg-slate-200 rounded-[24px] sm:rounded-[32px] flex items-center justify-center text-slate-400">
-                        <User size={48} />
+                      <div className="w-full h-full bg-[#dfe5e7] flex items-center justify-center overflow-hidden rounded-[24px] sm:rounded-[32px]">
+                        <User className="w-full h-full text-white fill-white translate-y-1/4 scale-125" />
                       </div>
                     )}
                  </div>
@@ -141,10 +141,13 @@ export function CaregiverDashboard() {
                 <Badge className="bg-slate-900 text-white border-none font-bold uppercase text-[9px] tracking-widest px-4 py-1.5 rounded-full shadow-lg">{cgTitle}</Badge>
               </div>
               <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-slate-400">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={handleToggleAvailability}>
-                   <div className={`w-2 h-2 rounded-full ${isAvail ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></div>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => {
+                   if (caregiver?.isVerified === false) return;
+                   handleToggleAvailability();
+                }}>
+                   <div className={`w-2 h-2 rounded-full ${!caregiver?.isVerified ? 'bg-slate-300' : isAvail ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></div>
                    <span className="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors">
-                     {isAvail ? 'Live & Available' : 'On Leave / Busy'} (Click to toggle)
+                     {!caregiver?.isVerified ? 'Pending Admin Approval' : isAvail ? 'Live & Available (Click to toggle)' : 'On Leave / Busy (Click to toggle)'} 
                    </span>
                 </div>
                 <span className="w-1 h-1 bg-slate-200 rounded-full hidden sm:inline"></span>
@@ -186,6 +189,25 @@ export function CaregiverDashboard() {
           </div>
         </div>
 
+        {caregiver?.isVerified === false && (
+          <div className="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-[32px] flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+              <AlertCircle size={120} />
+            </div>
+            <div className="flex items-start gap-4 relative z-10">
+               <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center shrink-0">
+                 <AlertCircle size={24} />
+               </div>
+               <div>
+                  <h3 className="text-lg font-bold text-amber-900 mb-1">Account Pending Approval</h3>
+                  <p className="text-amber-700/80 font-medium text-sm leading-relaxed max-w-3xl">
+                    Your caregiver profile has been created and is currently under review by our administration team. 
+                    <strong> You will not appear on the public network and cannot receive bookings until approved.</strong> We will notify you once verified.
+                  </p>
+               </div>
+            </div>
+          </div>
+        )}
         {error && (
           <div className="mb-8 p-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl font-bold text-sm flex items-center gap-3">
             <AlertCircle size={20} /> {error}
@@ -373,20 +395,20 @@ export function CaregiverDashboard() {
                            </div>
                         </div>
 
-                        <div className="flex items-center gap-4 md:border-l border-slate-100 pl-0 md:pl-10">
+                        <div className="flex items-center gap-4 md:border-l border-slate-100 pl-0 md:pl-6 lg:pl-10 w-full md:w-auto">
                            {shift.status === 'confirmed' ? (
-                             <div className="flex gap-2">
-                               <Button className="h-16 px-10 rounded-2xl bg-primary hover:bg-blue-600 text-white font-black text-sm uppercase tracking-widest shadow-xl" onClick={() => updateBookingStatus(shift._id, 'active')}>
-                                  <Play size={18} className="mr-3" /> COMMENCE
+                             <div className="flex w-full">
+                               <Button className="h-16 w-full md:w-auto px-6 lg:px-10 rounded-2xl bg-primary hover:bg-blue-600 text-white font-black text-xs sm:text-sm uppercase tracking-widest shadow-xl" onClick={() => updateBookingStatus(shift._id, 'active')}>
+                                  <Play size={18} className="mr-2 sm:mr-3 shrink-0" /> COMMENCE
                                </Button>
                              </div>
                            ) : shift.status === 'active' ? (
-                             <div className="flex gap-2">
-                                <Button className="h-16 px-8 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm uppercase tracking-widest shadow-xl" onClick={() => { setSelectedBookingId(shift._id); setIsNoteModalOpen(true); }}>
-                                   <Activity size={18} className="mr-3" /> LOG OBSERVATIONS
+                             <div className="flex flex-col sm:flex-row flex-wrap w-full gap-3">
+                                <Button className="h-16 w-full sm:w-auto flex-grow px-4 lg:px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[11px] sm:text-xs uppercase tracking-widest shadow-xl" onClick={() => { setSelectedBookingId(shift._id); setIsNoteModalOpen(true); }}>
+                                   <Activity size={18} className="mr-2 shrink-0" /> <span className="truncate">LOG OBSERVATIONS</span>
                                 </Button>
-                               <Button className="h-16 px-8 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-sm uppercase tracking-widest shadow-xl" onClick={() => updateBookingStatus(shift._id, 'completed')}>
-                                  <CheckCircle size={18} className="mr-3 text-emerald-400" /> COMPLETE
+                               <Button className="h-16 w-full sm:w-auto flex-grow px-4 lg:px-6 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-[11px] sm:text-xs uppercase tracking-widest shadow-xl" onClick={() => updateBookingStatus(shift._id, 'completed')}>
+                                  <CheckCircle size={18} className="mr-2 text-emerald-400 shrink-0" /> <span className="truncate">COMPLETE</span>
                                </Button>
                              </div>
                            ) : (

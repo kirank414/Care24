@@ -16,6 +16,8 @@ const notifIcons: Record<string, React.ReactNode> = {
   care_note_added: <FileText className="w-4 h-4 text-amber-500" />,
   alert_generated: <AlertTriangle className="w-4 h-4 text-red-500" />,
   new_message: <MessageCircle className="w-4 h-4 text-indigo-500" />,
+  admin_message: <MessageCircle className="w-4 h-4 text-blue-600" />,
+  admin_warning: <AlertTriangle className="w-4 h-4 text-amber-600" />,
 };
 
 const notifBg: Record<string, string> = {
@@ -26,6 +28,8 @@ const notifBg: Record<string, string> = {
   care_note_added: 'bg-amber-50',
   alert_generated: 'bg-red-50',
   new_message: 'bg-indigo-50',
+  admin_message: 'bg-blue-100',
+  admin_warning: 'bg-amber-100',
 };
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose }) => {

@@ -116,7 +116,7 @@ export function SignupPage() {
                   <Input 
                     id="name" 
                     placeholder="Enter full name"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    className="pl-14 sm:pl-16 pr-6 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 text-ellipsis overflow-hidden whitespace-nowrap" 
                     {...register('name', {
                       onBlur: (e) => {
                         setValue('name', toProperCase(e.target.value.trim()));
@@ -134,7 +134,7 @@ export function SignupPage() {
                   <Input 
                     id="email" 
                     placeholder="email@example.com"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs lowercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    className="pl-14 sm:pl-16 pr-6 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs lowercase tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 text-ellipsis overflow-hidden whitespace-nowrap" 
                     {...register('email', {
                       onBlur: (e) => {
                         setValue('email', normalizeEmail(e.target.value));
@@ -153,7 +153,7 @@ export function SignupPage() {
                     id="password" 
                     type="password" 
                     placeholder="••••••••"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    className="pl-14 sm:pl-16 pr-6 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 text-ellipsis overflow-hidden whitespace-nowrap" 
                     {...register('password')}
                   />
                 </div>
@@ -168,7 +168,7 @@ export function SignupPage() {
                     id="confirmPassword" 
                     type="password" 
                     placeholder="••••••••"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    className="pl-14 sm:pl-16 pr-6 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 text-ellipsis overflow-hidden whitespace-nowrap" 
                     {...register('confirmPassword')}
                   />
                 </div>
@@ -181,7 +181,7 @@ export function SignupPage() {
                   <User className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 pointer-events-none" />
                   <select 
                     id="role"
-                    className="pl-16 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 outline-none text-slate-800"
+                    className="pl-14 sm:pl-16 pr-8 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 outline-none text-slate-800 text-ellipsis overflow-hidden whitespace-nowrap"
                     {...register('role')}
                   >
                     <option value="user">Patient or Family Member</option>

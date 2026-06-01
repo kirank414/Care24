@@ -34,13 +34,23 @@ export function Navbar() {
     <>
       {/* Sticky Mobile CTA */}
       <div className="lg:hidden fixed bottom-6 left-6 right-6 z-[100]">
-         <Button 
-            className="w-full h-16 rounded-[24px] bg-primary text-white font-black text-sm uppercase tracking-widest shadow-[0_20px_40px_rgba(37,99,235,0.4)] border-none active:scale-[0.98] transition-all"
-            render={<Link to="/caregivers" />}
-            nativeButton={false}
-         >
-            Find a Specialist Now <ArrowRight className="ml-2 h-4 w-4" />
-         </Button>
+        {!isAuthenticated ? (
+           <Button 
+              className="w-full h-16 rounded-[24px] bg-primary text-white font-black text-sm uppercase tracking-widest shadow-[0_20px_40px_rgba(37,99,235,0.4)] border-none active:scale-[0.98] transition-all"
+              render={<Link to="/login" />}
+              nativeButton={false}
+           >
+              Login or Sign Up <ArrowRight className="ml-2 h-4 w-4" />
+           </Button>
+        ) : (
+           <Button 
+              className="w-full h-16 rounded-[24px] bg-slate-950 text-white font-black text-sm uppercase tracking-widest shadow-[0_20px_40px_rgba(0,0,0,0.4)] border-none active:scale-[0.98] transition-all"
+              render={<Link to="/dashboard" />}
+              nativeButton={false}
+           >
+              Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+           </Button>
+        )}
       </div>
 
       {/* Upper Top Bar */}
@@ -162,7 +172,13 @@ export function Navbar() {
                         {isAuthenticated ? (
                           <div className="space-y-4">
                             <div className="flex items-center space-x-4">
-                               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`} className="w-12 h-12 rounded-2xl bg-white shadow-sm" alt="U" />
+                               <div className="w-12 h-12 rounded-2xl bg-[#dfe5e7] shadow-sm overflow-hidden flex items-center justify-center shrink-0">
+                                  {user?.imageUrl ? (
+                                     <img src={user.imageUrl} className="w-full h-full object-cover" alt="Profile" />
+                                  ) : (
+                                     <User className="w-full h-full text-white fill-white translate-y-1/4 scale-125" />
+                                  )}
+                               </div>
                                <div>
                                  <h4 className="font-bold text-slate-900">{user?.name}</h4>
                                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{user?.role}</p>

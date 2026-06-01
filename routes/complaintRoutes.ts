@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Complaint from "../models/Complaint.js";
 import Booking from "../models/Booking.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
+import Notification from "../models/Notification.js";
 
 const router = express.Router();
 
@@ -93,7 +94,7 @@ router.get("/", protect, authorize("admin"), async (req, res) => {
 // @access  Private (Admin)
 router.put("/:id", protect, authorize("admin"), async (req, res) => {
   try {
-    const { status, resolution } = req.body;
+    const { status, adminMessageToPatient, adminWarningToCaregiver } = req.body;
 
     if (!status || !["resolved", "escalated"].includes(status)) {
       return res.status(400).json({ message: "Please provide a valid status: resolved or escalated" });
@@ -105,9 +106,16 @@ router.put("/:id", protect, authorize("admin"), async (req, res) => {
     }
 
     complaint.status = status;
-    if (resolution !== undefined) {
-      complaint.resolution = resolution;
+    complaint.resolutionType = status === "resolved" ? "Resolved" : "Escalated";
+    
+    if (adminMessageToPatient !== undefined) {
+      complaint.resolution = adminMessageToPatient;
     }
+    
+    if (adminWarningToCaregiver !== undefined) {
+      complaint.caregiverWarning = adminWarningToCaregiver;
+    }
+
     await complaint.save();
 
     const populated = await Complaint.findById(complaint._id)
@@ -117,6 +125,29 @@ router.put("/:id", protect, authorize("admin"), async (req, res) => {
         path: "booking",
         populate: { path: "service" }
       });
+
+    // Send notifications
+    try {
+      if (adminMessageToPatient && populated.patient && populated.patient.user) {
+        await Notification.create({
+          user: populated.patient.user,
+          type: "admin_message",
+          title: "Complaint Update",
+          message: adminMessageToPatient
+        });
+      }
+
+      if (adminWarningToCaregiver && adminWarningToCaregiver.trim() !== "" && populated.caregiver && populated.caregiver.user) {
+        await Notification.create({
+          user: populated.caregiver.user,
+          type: "admin_warning",
+          title: "Admin Notice",
+          message: adminWarningToCaregiver
+        });
+      }
+    } catch (notifErr) {
+      console.error("Failed to send complaint notifications:", notifErr);
+    }
 
     res.json(populated);
   } catch (error) {

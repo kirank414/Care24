@@ -33,6 +33,15 @@ const complaintSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    resolutionType: {
+      type: String,
+      enum: ["Open", "Escalated", "Resolved"],
+      default: "Open",
+    },
+    caregiverWarning: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,

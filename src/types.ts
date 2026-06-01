@@ -6,6 +6,7 @@ export interface User {
   name: string;
   role: UserRole;
   avatar?: string;
+  imageUrl?: string;
 }
 
 export interface Caregiver extends User {
