@@ -31,7 +31,7 @@ import {
   Edit2,
   Languages,
   BookOpen,
-  MessageCircle
+  Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +54,7 @@ import { useAuthStore } from '../../store';
 import { api } from '../../api';
 import { toast } from 'sonner';
 import NotificationCenter from '../../components/NotificationCenter';
+import { toProperCase, cleanPhone } from '@/src/utils/normalize';
 
 const TIME_SLOTS = [
   { label: "08:00 AM - 09:00 AM", start: "08:00", end: "09:00" },
@@ -70,14 +71,7 @@ const TIME_SLOTS = [
   { label: "07:00 PM - 08:00 PM", start: "19:00", end: "20:00" },
 ];
 
-const initialChartData = [
-  { time: '08:00', heartRate: 72, oxygen: 98, bp: 120 },
-  { time: '10:00', heartRate: 75, oxygen: 97, bp: 122 },
-  { time: '12:00', heartRate: 68, oxygen: 98, bp: 118 },
-  { time: '14:00', heartRate: 70, oxygen: 99, bp: 120 },
-  { time: '16:00', heartRate: 74, oxygen: 98, bp: 121 },
-  { time: '18:00', heartRate: 71, oxygen: 97, bp: 119 },
-];
+// Wellness data is sourced exclusively from caregiver-entered care notes (no simulated values)
 
 export function UserDashboard() {
   const { user } = useAuthStore();
@@ -101,11 +95,10 @@ export function UserDashboard() {
     createBooking,
     updatePatient,
     submitComplaint,
+    submitInquiry,
     settings,
     fetchSettings
   } = useCareStore();
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState('');
   const [selectedCaregiver, setSelectedCaregiver] = useState('');
   const [durationType, setDurationType] = useState<'hourly' | 'daily' | 'long-term'>('hourly');
@@ -115,6 +108,7 @@ export function UserDashboard() {
   const [endTime, setEndTime] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [busySlots, setBusySlots] = useState<any[]>([]);
@@ -189,6 +183,9 @@ export function UserDashboard() {
   // Patient Profile form & section states
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [showMedicalDetails, setShowMedicalDetails] = useState(false);
+  const [isBookingDetailsOpen, setIsBookingDetailsOpen] = useState(false);
+  const [isCarePlanOpen, setIsCarePlanOpen] = useState(false);
+
   const [profileForm, setProfileForm] = useState({
     name: '',
     age: '',
@@ -199,6 +196,7 @@ export function UserDashboard() {
     emergencyContactName: '',
     emergencyContactPhone: '',
     emergencyContactRelation: '',
+    emergencyContactNotificationPreference: 'SMS',
     medicalHistory: '',
     allergies: '',
     currentMedications: '',
@@ -300,6 +298,7 @@ export function UserDashboard() {
         emergencyContactName: patient.emergencyContact?.name || '',
         emergencyContactPhone: patient.emergencyContact?.phone || '',
         emergencyContactRelation: patient.emergencyContact?.relation || '',
+        emergencyContactNotificationPreference: patient.emergencyContact?.notificationPreference || 'SMS',
         medicalHistory: patient.medicalHistory?.join(', ') || '',
         allergies: patient.allergies?.join(', ') || '',
         currentMedications: patient.currentMedications?.join(', ') || '',
@@ -319,6 +318,7 @@ export function UserDashboard() {
         emergencyContactName: '',
         emergencyContactPhone: '',
         emergencyContactRelation: '',
+        emergencyContactNotificationPreference: 'SMS',
         medicalHistory: '',
         allergies: '',
         currentMedications: '',
@@ -333,6 +333,22 @@ export function UserDashboard() {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const toProperCase = (str: string): string => {
+      if (!str) return str;
+      return str
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    };
+
+    const cleanPhone = (phone: string): string => {
+      if (!phone) return phone;
+      const trimmed = phone.trim();
+      const hasPlus = trimmed.startsWith("+");
+      const digits = trimmed.replace(/\D/g, "");
+      return (hasPlus ? "+" : "") + digits;
+    };
     
     if (!profileForm.name || !profileForm.age || !profileForm.gender || !profileForm.bloodGroup || !profileForm.phone || !profileForm.address || !profileForm.emergencyContactName || !profileForm.emergencyContactPhone || !profileForm.emergencyContactRelation) {
       toast.error('Please fill in all required fields');
@@ -359,21 +375,22 @@ export function UserDashboard() {
     }
 
     if (!phoneRegex.test(profileForm.emergencyContactPhone.trim())) {
-      toast.error('Please enter a valid Emergency Contact Phone Number');
+      toast.error('Please enter a valid Primary Contact Phone Number');
       return;
     }
 
     const dataToSubmit = {
-      name: profileForm.name.trim(),
+      name: toProperCase(profileForm.name.trim()),
       age: ageNum,
       gender: profileForm.gender,
       bloodGroup: cleanBloodGroup,
-      phone: profileForm.phone.trim(),
+      phone: cleanPhone(profileForm.phone),
       address: profileForm.address.trim(),
       emergencyContact: {
-        name: profileForm.emergencyContactName.trim(),
-        phone: profileForm.emergencyContactPhone.trim(),
-        relation: profileForm.emergencyContactRelation.trim()
+        name: toProperCase(profileForm.emergencyContactName.trim()),
+        phone: cleanPhone(profileForm.emergencyContactPhone),
+        relation: profileForm.emergencyContactRelation.trim(),
+        notificationPreference: profileForm.emergencyContactNotificationPreference
       },
       medicalHistory: profileForm.medicalHistory.split(',').map(s => s.trim()).filter(Boolean),
       allergies: profileForm.allergies.split(',').map(s => s.trim()).filter(Boolean),
@@ -433,6 +450,7 @@ export function UserDashboard() {
   };
 
   const activeBooking = bookings[0];
+  const upcomingVisits = bookings.filter((b: any) => ['pending', 'confirmed', 'active'].includes(b?.status));
   
   const getBookingStatusStyles = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -495,6 +513,16 @@ export function UserDashboard() {
     width: '0%'
   };
 
+  const getServiceStatusStep = (status?: string) => {
+    switch (status) {
+      case 'pending': return 1;
+      case 'confirmed': return 3;
+      case 'active': return 4;
+      case 'completed': return 5;
+      default: return -1;
+    }
+  };
+
   const patientName = patient?.name || '';
   const patientAge = patient?.age || 0;
   const patientGender = patient?.gender || '';
@@ -529,17 +557,13 @@ export function UserDashboard() {
                      </Badge>
                   </div>
                   <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[9px] mt-2 flex items-center gap-2">
-                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Clinical Protocol: ISO-9001.24 • Last Sync: Live
+                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Care Coordination • Last Sync: Live
                   </p>
                </div>
             </div>
           </div>
           
           <div className="flex items-center gap-4 pb-1">
-             <div className="relative hidden xl:block">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input placeholder="Search medical records..." className="h-14 pl-12 pr-6 w-72 bg-white border border-slate-100 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-primary/5 transition-all outline-none shadow-sm" />
-             </div>
              <div className="relative">
                <Button
                  variant="ghost"
@@ -569,7 +593,7 @@ export function UserDashboard() {
           </div>
         )}
 
-        {/* Patient Clinical Profile Card */}
+        {/* Patient Care Profile Card */}
         {!patient ? (
           <div className="mb-10">
             <Card className="rounded-[40px] border-none shadow-xl bg-white p-2">
@@ -582,7 +606,7 @@ export function UserDashboard() {
                   <div className="flex-grow text-center md:text-left space-y-2">
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">No Patient Profile Configured</h2>
                     <p className="text-slate-500 font-medium text-sm max-w-xl">
-                      Set up your elderly patient's healthcare profile to automatically match with our elite care network, monitor hospital-grade vitals, and log clinical notes.
+                      Set up your elderly relative's care profile to automatically match with our verified caregiver network, monitor wellness reports, and log support updates.
                     </p>
                   </div>
                   <div className="shrink-0 w-full md:w-auto">
@@ -692,15 +716,16 @@ export function UserDashboard() {
                     </div>
                   </div>
 
-                  {/* Right Column: Emergency & Edit Action */}
+                  {/* Right Column: Primary Contact & Edit Action */}
                   <div className="flex flex-col justify-between items-center lg:items-end gap-6 shrink-0 lg:w-64 border-t lg:border-t-0 lg:border-l border-slate-100 pt-6 lg:pt-0 lg:pl-10">
                     <div className="w-full text-center lg:text-right space-y-2">
-                      <Badge className="bg-red-50 text-red-600 border border-red-100 rounded-lg px-2 py-0.5 text-[8px] font-black uppercase tracking-wider">Emergency Protocol</Badge>
+                      <Badge className="bg-blue-50 text-blue-600 border border-blue-100 rounded-lg px-2 py-0.5 text-[8px] font-black uppercase tracking-wider">Primary Contact</Badge>
                       {emergencyContact ? (
                         <div>
                           <p className="font-bold text-slate-900 text-base leading-none mb-1">{emergencyContact.name}</p>
                           <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{emergencyContact.relation}</p>
                           <p className="text-sm text-slate-800 font-medium mt-2">{emergencyContact.phone}</p>
+                          <p className="text-[10px] font-bold text-blue-600 bg-blue-50/50 border border-blue-100 rounded-md px-1.5 py-0.5 inline-block mt-2">PREFERENCE: {emergencyContact.notificationPreference || 'SMS'}</p>
                         </div>
                       ) : (
                         <p className="text-xs text-red-500 font-medium">No contact configured</p>
@@ -807,9 +832,33 @@ export function UserDashboard() {
                <div className="relative bg-transparent p-8 flex flex-col md:flex-row items-center justify-between text-white gap-8 font-sans">
                   <div className="flex items-center gap-6">
                      <div className="relative">
-                        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl transition-transform group-hover:scale-105 overflow-hidden">
-                           <img src="https://images.unsplash.com/photo-1559839734-2b71f1536783?auto=format&fit=crop&q=80&w=200" alt="Caregiver" referrerPolicy="no-referrer" />
-                        </div>
+                        <div className="w-16 h-16 rounded-2xl bg-[#2a3942] flex items-center justify-center border border-white/10 shadow-2xl transition-transform group-hover:scale-105 overflow-hidden">
+                            {activeBooking?.caregiver?.profileImage ? (
+                              <img
+                                src={activeBooking.caregiver.profileImage}
+                                alt={activeBooking.caregiver.name || 'Caregiver'}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
+                              />
+                            ) : null}
+                            {/* WhatsApp-style default avatar — shown when no profile image */}
+                            <svg
+                              className={`w-full h-full ${activeBooking?.caregiver?.profileImage ? 'hidden' : ''}`}
+                              viewBox="0 0 212 212"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <rect width="212" height="212" fill="#2a3942"/>
+                              <path
+                                d="M106 106C128.09 106 146 88.09 146 66C146 43.91 128.09 26 106 26C83.91 26 66 43.91 66 66C66 88.09 83.91 106 106 106Z"
+                                fill="#b0bec5"
+                              />
+                              <path
+                                d="M106 116C72.69 116 26 132.69 26 150V166H186V150C186 132.69 139.31 116 106 116Z"
+                                fill="#b0bec5"
+                              />
+                            </svg>
+                         </div>
                         <div className={`absolute -bottom-1 -right-1 w-5 h-5 ${activeBookingStyles.indicator} rounded-full border-[3px] border-slate-950 flex items-center justify-center text-[7px] font-black`}>{activeBookingStyles.text}</div>
                      </div>
                      <div>
@@ -833,78 +882,160 @@ export function UserDashboard() {
                </div>
             </motion.div>
 
-            {/* Vitals Telemetry */}
+             {/* Service Status Tracker */}
+             {activeBooking && (
+               <motion.div
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 className="p-8 rounded-[40px] bg-white border border-slate-100 shadow-xl shadow-slate-100/40 mb-10"
+               >
+                 <div className="flex items-center justify-between mb-6">
+                   <div>
+                     <h4 className="text-lg font-bold text-slate-900 tracking-tight font-sans">Service Status Tracker</h4>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Real-time status updates of your caregiver booking</p>
+                   </div>
+                   <Badge className="bg-blue-50 text-blue-600 border-none text-[9px] font-black uppercase tracking-wider px-2.5 py-1">
+                     {activeBooking.status.toUpperCase()}
+                   </Badge>
+                 </div>
+
+                 <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-2 mt-8 px-4">
+                   {/* Background progress line */}
+                   <div className="absolute top-1/2 left-8 right-8 h-1 bg-slate-100 -translate-y-1/2 hidden md:block z-0"></div>
+                   
+                   {/* Dynamic active line */}
+                   <div 
+                     className="absolute top-1/2 left-8 h-1 bg-blue-600 -translate-y-1/2 hidden md:block z-0 transition-all duration-500"
+                     style={{ 
+                       width: `${Math.max(0, Math.min(100, (getServiceStatusStep(activeBooking.status) / 5) * 100))}%` 
+                     }}
+                   ></div>
+
+                   {[
+                     "Request Submitted",
+                     "Caregiver Reviewing",
+                     "Accepted",
+                     "Caregiver Assigned",
+                     "Service In Progress",
+                     "Completed"
+                   ].map((stepLabel, idx) => {
+                     const currentStep = getServiceStatusStep(activeBooking.status);
+                     const isCompleted = idx < currentStep;
+                     const isActive = idx === currentStep;
+                     
+                     return (
+                       <div key={idx} className="flex md:flex-col items-center gap-4 md:gap-3 flex-1 relative z-10 w-full md:w-auto">
+                         <div 
+                           className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all duration-300 ${
+                             isCompleted ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' :
+                             isActive ? 'bg-white border-blue-600 text-blue-600 shadow-md ring-4 ring-blue-50 animate-pulse' :
+                             'bg-white border-slate-200 text-slate-400'
+                           }`}
+                         >
+                           {isCompleted ? '✓' : idx + 1}
+                         </div>
+                         <div className="text-left md:text-center">
+                           <p className={`text-xs font-bold leading-tight ${isActive ? 'text-blue-600 font-black' : isCompleted ? 'text-slate-800' : 'text-slate-400'}`}>{stepLabel}</p>
+                           <p className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold mt-0.5">
+                             {isActive ? 'In Progress' : isCompleted ? 'Completed' : 'Pending'}
+                           </p>
+                         </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+
+            {/* Wellness Observations */}
             <Card className="enterprise-card border-none shadow-2xl shadow-slate-200/40 rounded-[40px] overflow-hidden p-2">
                <CardHeader className="p-10 pb-0 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div>
-                    <CardTitle className="text-2xl font-bold text-slate-900 tracking-tight">Clinical Telemetry</CardTitle>
+                    <CardTitle className="text-2xl font-bold text-slate-900 tracking-tight font-sans">Wellness Observations</CardTitle>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
-                       <Zap size={12} className="text-primary" /> Live hospital-grade data streaming
+                       <Zap size={12} className="text-primary" /> Live care and wellness updates
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                     {careNotes[0]?.isAlert ? (
+                     {careNotes.length > 0 && careNotes[0]?.isAlert ? (
                        <Badge className="bg-red-50 text-red-600 border border-red-200 shadow-sm rounded-lg px-4 h-9 font-bold text-[10px] items-center flex gap-2 animate-in slide-in-from-right-4">
                           <ShieldAlert size={14} className="animate-pulse text-red-500" />
-                          SOS ALERT: {careNotes[0]?.alertReason || 'Abnormal Vitals Detected'}
+                          CARE ALERT: {careNotes[0]?.alertReason || 'Abnormal Observations Detected'}
                        </Badge>
-                     ) : (
+                     ) : careNotes.length > 0 ? (
                        <Badge className="bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg px-4 h-9 font-bold text-[10px] items-center flex gap-2">
                           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
                           DATA SYNCED - STABLE
+                       </Badge>
+                     ) : (
+                       <Badge className="bg-slate-50 text-slate-400 border border-slate-200 rounded-lg px-4 h-9 font-bold text-[10px] items-center flex gap-2">
+                          <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>
+                          NO VISITS RECORDED
                        </Badge>
                      )}
                   </div>
                </CardHeader>
                <CardContent className="p-10">
-                  <div className="h-[340px] w-full mb-12">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <AreaChart data={careNotes.length > 0 
-                        ? [...careNotes].reverse().map((note: any) => ({
-                            time: new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                            heartRate: note.heartRate ?? note.vitalSigns?.heartRate ?? 72,
-                            oxygen: note.spo2 ?? note.vitalSigns?.oxygenSaturation ?? 98,
-                            bp: parseInt(note.bloodPressure || note.vitalSigns?.bloodPressure || '120')
-                          }))
-                        : initialChartData}>
-                        <defs>
-                          <linearGradient id="primaryGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#0F52BA" stopOpacity={0.08}/>
-                            <stop offset="95%" stopColor="#0F52BA" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} dx={-10} />
-                        <Tooltip 
-                          contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 30px 60px rgba(0,0,0,0.12)', fontWeight: 'bold', padding: '15px'}}
-                          cursor={{ stroke: '#0F52BA', strokeWidth: 1, strokeDasharray: '4 4' }}
-                        />
-                        <Area type="monotone" dataKey="heartRate" stroke="#0F52BA" strokeWidth={4} fillOpacity={1} fill="url(#primaryGradient)" />
-                        <Area type="monotone" dataKey="oxygen" stroke="#10b981" strokeWidth={4} fillOpacity={0} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-                     {[
-                       { label: 'Pulse Rate', val: careNotes[0]?.heartRate ?? careNotes[0]?.vitalSigns?.heartRate ?? '72', unit: 'BPM', icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
-                       { label: 'Oxygen Sat.', val: careNotes[0]?.spo2 ?? careNotes[0]?.vitalSigns?.oxygenSaturation ?? '98', unit: '%', icon: Zap, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                       { label: 'Blood Pressure', val: careNotes[0]?.bloodPressure || careNotes[0]?.vitalSigns?.bloodPressure || '120/80', unit: 'mm', icon: ShieldCheck, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-                       { label: 'Temperature', val: careNotes[0]?.temperature ?? careNotes[0]?.vitalSigns?.temperature ?? '98.6', unit: '°F', icon: Heart, color: 'text-amber-500', bg: 'bg-amber-50' },
-                     ].map((stat, i) => (
-                       <div key={i} className="p-6 rounded-[28px] bg-slate-50/50 border border-slate-100 hover:bg-white hover:border-blue-100 hover:shadow-xl transition-all group">
-                          <div className={`w-10 h-10 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform`}>
-                             <stat.icon size={20} />
-                          </div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 leading-none">{stat.label}</p>
-                          <div className="flex items-baseline gap-1.5">
-                             <h4 className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{stat.val}</h4>
-                             <span className="text-[10px] font-bold text-slate-400 leading-none">{stat.unit}</span>
-                          </div>
-                       </div>
-                     ))}
-                  </div>
+                  {careNotes.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-16 h-16 rounded-full bg-slate-50/50 border border-slate-100 flex items-center justify-center mb-4">
+                        <Activity size={28} className="text-slate-300" />
+                      </div>
+                      <h4 className="text-lg font-bold text-slate-800 tracking-tight">No Wellness Observations Available</h4>
+                      <p className="text-xs text-slate-400 mt-2 max-w-sm leading-relaxed font-medium">
+                        Wellness observations, pulse rate, oxygen levels, and blood pressure records will populate here once caregiver logs are recorded during visits.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="h-[340px] w-full mb-12">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <AreaChart data={[...careNotes].reverse().map((note: any) => ({
+                              time: new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                              heartRate: note.heartRate ?? note.vitalSigns?.heartRate ?? 0,
+                              oxygen: note.spo2 ?? note.vitalSigns?.oxygenSaturation ?? 0,
+                              bp: parseInt(note.bloodPressure || note.vitalSigns?.bloodPressure || '0')
+                            }))}>
+                            <defs>
+                              <linearGradient id="primaryGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#0F52BA" stopOpacity={0.08}/>
+                                <stop offset="95%" stopColor="#0F52BA" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                            <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} dx={-10} />
+                            <Tooltip 
+                              contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 30px 60px rgba(0,0,0,0.12)', fontWeight: 'bold', padding: '15px'}}
+                              cursor={{ stroke: '#0F52BA', strokeWidth: 1, strokeDasharray: '4 4' }}
+                            />
+                            <Area type="monotone" dataKey="heartRate" stroke="#0F52BA" strokeWidth={4} fillOpacity={1} fill="url(#primaryGradient)" />
+                            <Area type="monotone" dataKey="oxygen" stroke="#10b981" strokeWidth={4} fillOpacity={0} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+                         {[
+                           { label: 'Pulse Rate', val: careNotes[0]?.heartRate ?? careNotes[0]?.vitalSigns?.heartRate ?? 'N/A', unit: 'BPM', icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
+                           { label: 'Oxygen Sat.', val: careNotes[0]?.spo2 ?? careNotes[0]?.vitalSigns?.oxygenSaturation ?? 'N/A', unit: '%', icon: Zap, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                           { label: 'Blood Pressure', val: careNotes[0]?.bloodPressure || careNotes[0]?.vitalSigns?.bloodPressure || 'N/A', unit: 'mmHg', icon: ShieldCheck, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                           { label: 'Temperature', val: careNotes[0]?.temperature ?? careNotes[0]?.vitalSigns?.temperature ?? 'N/A', unit: '°F', icon: Heart, color: 'text-amber-500', bg: 'bg-amber-50' },
+                         ].map((stat, i) => (
+                           <div key={i} className="p-6 rounded-[28px] bg-slate-50/50 border border-slate-100 hover:bg-white hover:border-blue-100 hover:shadow-xl transition-all group">
+                              <div className={`w-10 h-10 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform`}>
+                                 <stat.icon size={20} />
+                              </div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 leading-none">{stat.label}</p>
+                              <div className="flex items-baseline gap-1.5">
+                                 <h4 className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{stat.val}</h4>
+                                 <span className="text-[10px] font-bold text-slate-400 leading-none">{stat.val !== 'N/A' ? stat.unit : ''}</span>
+                              </div>
+                           </div>
+                         ))}
+                      </div>
+                    </>
+                  )}
                </CardContent>
             </Card>
 
@@ -913,7 +1044,7 @@ export function UserDashboard() {
                <div className="flex items-center justify-between px-2">
                   <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-primary"><History size={20} /></div>
-                    Clinical Care Journal
+                    Care Journal & Activity Log
                   </h3>
                </div>
                <div className="space-y-2">
@@ -939,9 +1070,13 @@ export function UserDashboard() {
                              <span className="text-slate-300">•</span>
                              <span>{log?.createdAt ? new Date(log.createdAt).toLocaleString() : ''}</span>
                           </div>
-                          <p className="text-[10px] font-bold text-primary mt-1.5">
-                             Vitals: BP: {log?.bloodPressure || log?.vitalSigns?.bloodPressure || '120/80'} | HR: {log?.heartRate ?? log?.vitalSigns?.heartRate ?? 72} BPM | SpO2: {log?.spo2 ?? log?.vitalSigns?.oxygenSaturation ?? 98}% | Temp: {log?.temperature ?? log?.vitalSigns?.temperature ?? 98.6}°F
-                          </p>
+                          {(log?.bloodPressure || log?.vitalSigns?.bloodPressure || log?.heartRate || log?.vitalSigns?.heartRate || log?.spo2 || log?.vitalSigns?.oxygenSaturation || log?.temperature || log?.vitalSigns?.temperature) ? (
+                            <p className="text-[10px] font-bold text-primary mt-1.5">
+                              Observations: BP: {log?.bloodPressure || log?.vitalSigns?.bloodPressure || 'N/A'} | HR: {log?.heartRate ?? log?.vitalSigns?.heartRate ?? 'N/A'} BPM | SpO2: {log?.spo2 ?? log?.vitalSigns?.oxygenSaturation ?? 'N/A'}% | Temp: {log?.temperature ?? log?.vitalSigns?.temperature ?? 'N/A'}°F
+                            </p>
+                          ) : (
+                            <p className="text-[10px] font-medium text-slate-400 mt-1.5">No health observations recorded.</p>
+                          )}
                         </div>
                         <div className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border ${
                           log?.isAlert
@@ -959,7 +1094,7 @@ export function UserDashboard() {
                        <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4">
                          <FileText size={28} className="text-slate-200" />
                        </div>
-                       <p className="font-bold text-slate-400 text-base">No Clinical Notes Yet</p>
+                       <p className="font-bold text-slate-400 text-base">No Care Notes Yet</p>
                        <p className="text-xs text-slate-300 mt-1.5 text-center max-w-xs">Care notes will appear here once your caregiver begins logging session observations.</p>
                      </div>
                    )}
@@ -1033,32 +1168,114 @@ export function UserDashboard() {
                            className={`h-full ${activeBooking ? activeBookingStyles.indicator : 'bg-slate-300'} rounded-full`}
                          ></motion.div>
                       </div>
-                   </div>
-
-                   <div className="grid grid-cols-2 gap-4">
-                      <Button variant="ghost" className="rounded-2xl h-14 border border-slate-100 text-slate-600 font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all">INVOICE</Button>
-                      <Button className="rounded-2xl h-14 bg-slate-950 text-white font-bold text-xs uppercase tracking-widest shadow-xl transition-all hover:scale-[1.02]">RENEW</Button>
-                   </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                       <Button 
+                         variant="ghost" 
+                         className="rounded-2xl h-14 border border-slate-100 text-slate-600 font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all text-center px-1"
+                         onClick={() => {
+                           if (activeBooking) {
+                             setIsBookingDetailsOpen(true);
+                           } else {
+                             toast.error('No active service details to view');
+                           }
+                         }}
+                       >
+                         Service Details
+                       </Button>
+                       <Button 
+                         className="rounded-2xl h-14 bg-slate-950 text-white font-bold text-xs uppercase tracking-widest shadow-xl transition-all hover:scale-[1.02] text-center px-1"
+                         onClick={() => {
+                           if (activeBooking) {
+                             setIsCarePlanOpen(true);
+                           } else {
+                             toast.error('No active care plan to view');
+                           }
+                         }}
+                       >
+                         Care Plan
+                       </Button>
+                    </div>
                 </div>
              </div>
 
-             {/* Critical Emergency Trigger */}
-             <div className="p-10 rounded-[40px] bg-red-50 border-2 border-red-100 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-red-100/50 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
+             {/* Coordinator Contact / Support Request */}
+             <div className="p-10 rounded-[40px] bg-blue-50/50 border-2 border-blue-100 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/50 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
                 <div className="flex items-center gap-5 mb-8">
-                   <div className="w-16 h-16 bg-white border border-red-100 text-red-500 rounded-3xl flex items-center justify-center shadow-xl animate-pulse ring-8 ring-red-100 group-hover:scale-110 transition-transform">
-                      <AlertCircle size={32} />
+                   <div className="w-16 h-16 bg-white border border-blue-100 text-primary rounded-3xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                      <Phone size={32} />
                    </div>
                    <div>
-                      <h5 className="font-bold text-xl text-slate-900 tracking-tight">SOS Override</h5>
-                      <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mt-1">Direct Command Link</p>
+                      <h5 className="font-bold text-xl text-slate-900 tracking-tight">Coordinator Help</h5>
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1">Direct Support Desk</p>
                    </div>
                 </div>
-                <p className="text-slate-600 text-sm font-medium leading-relaxed mb-10">Instantly trigger medical emergency escalation to our 24/7 clinical command center for ambulance or doctor dispatch.</p>
-                <Button className="w-full h-16 rounded-[24px] bg-red-600 hover:bg-red-700 text-white font-black text-sm uppercase tracking-widest shadow-2xl shadow-red-500/30 active:scale-95 transition-all">
-                   NOTIFY DOCTOR NOW
+                <p className="text-slate-600 text-sm font-medium leading-relaxed mb-10">Need scheduling assistance or have a care question? Instantly notify your assigned coordinator to contact you.</p>
+                <Button 
+                   onClick={async () => {
+                     try {
+                       await submitInquiry({
+                         question: `Support call requested by patient: ${patient?.name || user?.name || "Anonymous Patient"}`,
+                         email: patient?.phone || user?.email || "N/A"
+                       });
+                       toast.success('Support call request sent. Your care coordinator will contact you shortly.');
+                       fetchInquiries();
+                     } catch (err: any) {
+                       toast.error(err.response?.data?.message || err.message || 'Failed to request support call');
+                     }
+                   }}
+                   className="w-full h-16 rounded-[24px] bg-slate-950 hover:bg-slate-900 text-white font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                >
+                   REQUEST SUPPORT CALL
                 </Button>
              </div>
+
+              {/* Upcoming Visits Widget */}
+              <div className="p-8 rounded-[40px] bg-white border border-slate-100 shadow-sm space-y-6">
+                 <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-bold text-slate-900 tracking-tight font-sans">Upcoming Visits</h3>
+                    <Badge className="bg-blue-50 text-blue-600 border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">{upcomingVisits.length} SCHEDULED</Badge>
+                 </div>
+                 {upcomingVisits.length === 0 ? (
+                   <div className="flex flex-col items-center justify-center py-6 text-center">
+                     <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3">
+                       <Calendar size={20} className="text-slate-300" />
+                     </div>
+                     <p className="text-xs font-semibold text-slate-400">No Upcoming Visits</p>
+                     <p className="text-[10px] text-slate-300 mt-0.5">Use the 'Book Now' option to request care support</p>
+                   </div>
+                 ) : (
+                   <div className="space-y-4">
+                     {upcomingVisits.slice(0, 3).map((b: any, i: number) => {
+                        const statusStyle = getBookingStatusStyles(b?.status);
+                        const formattedDate = new Date(b?.startDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        });
+                        return (
+                          <div key={b?._id || i} className="flex gap-4 items-center justify-between p-3 rounded-2xl border border-slate-50 hover:border-slate-100 hover:bg-slate-50/55 transition-all">
+                             <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                 <Clock size={18} />
+                               </div>
+                               <div>
+                                 <p className="text-xs font-bold text-slate-900">{b?.service?.title || 'Nursing Support'}</p>
+                                 <p className="text-[10px] font-medium text-slate-500 mt-0.5">Caregiver: {b?.caregiver?.name || 'TBD'}</p>
+                                 <p className="text-[9px] font-semibold text-slate-400 mt-0.5">{formattedDate} @ {b?.startTime || 'Anytime'}</p>
+                               </div>
+                             </div>
+                             <div>
+                               <Badge className={`${statusStyle.badge} border-none text-[8px] font-black uppercase px-2 py-0.5`}>{b?.status || 'pending'}</Badge>
+                             </div>
+                          </div>
+                        );
+                     })}
+                   </div>
+                 )}
+              </div>
 
              {/* Booking History List */}
              <div className="p-8 rounded-[40px] bg-white border border-slate-100 shadow-sm">
@@ -1107,7 +1324,6 @@ export function UserDashboard() {
                                   >
                                     <AlertCircle size={14} />
                                   </Button>
-                                  <MessageCircle size={14} className="text-slate-300 group-hover:text-violet-400 transition-colors" />
                                </div>
                            </div>
                         </div>
@@ -1120,6 +1336,174 @@ export function UserDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Service Details Modal */}
+      <AnimatePresence>
+        {isBookingDetailsOpen && activeBooking && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              className="bg-white rounded-[40px] shadow-2xl max-w-lg w-full p-8 relative border border-slate-100"
+            >
+              <button 
+                onClick={() => setIsBookingDetailsOpen(false)} 
+                className="absolute top-6 right-6 w-10 h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  <FileText size={24} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight font-sans">Service Details</h3>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Information about your active service booking.</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-slate-50 p-6 rounded-3xl space-y-4">
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Service Type</span>
+                    <span className="text-sm font-bold text-slate-900">{activeBooking?.service?.title || 'Nursing Support'}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Assigned Caregiver</span>
+                    <span className="text-sm font-bold text-slate-900">{activeBooking?.caregiver?.name || 'TBD'}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Start Date</span>
+                    <span className="text-sm font-bold text-slate-900">{new Date(activeBooking?.startDate).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">End Date</span>
+                    <span className="text-sm font-bold text-slate-900">{new Date(activeBooking?.endDate).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Care Schedule</span>
+                    <span className="text-sm font-bold text-slate-900 capitalize">{activeBooking?.durationType || 'hourly'} ({activeBooking?.startTime || 'Anytime'})</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Service Status</span>
+                    <Badge className={`${activeBookingStyles.badge} border-none text-[9px] font-black uppercase px-2.5 py-0.5`}>
+                      {activeBooking?.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => setIsBookingDetailsOpen(false)}
+                  className="w-full h-14 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-widest shadow-xl"
+                >
+                  Close Details
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Care Plan Modal */}
+      <AnimatePresence>
+        {isCarePlanOpen && activeBooking && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              className="bg-white rounded-[40px] shadow-2xl max-w-lg w-full p-8 relative border border-slate-100"
+            >
+              <button 
+                onClick={() => setIsCarePlanOpen(false)} 
+                className="absolute top-6 right-6 w-10 h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  <Heart size={24} className="fill-blue-600 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight font-sans">Patient Care Plan</h3>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Customized elder care guidelines and requirements.</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-slate-50 p-6 rounded-3xl space-y-4 max-h-[350px] overflow-y-auto">
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Patient Name</span>
+                    <span className="text-sm font-bold text-slate-900">{activeBooking?.patient?.name || patient?.name || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Age</span>
+                    <span className="text-sm font-bold text-slate-900">{activeBooking?.patient?.age || patient?.age || 'N/A'} yrs</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Gender</span>
+                    <span className="text-sm font-bold text-slate-900">{activeBooking?.patient?.gender || patient?.gender || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Mobility Status</span>
+                    <span className="text-sm font-bold text-slate-900">{activeBooking?.patient?.mobilityStatus || patient?.mobilityStatus || 'Independent'}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Preferred Language</span>
+                    <span className="text-sm font-bold text-slate-900">{activeBooking?.patient?.preferredLanguage || patient?.preferredLanguage || 'English'}</span>
+                  </div>
+                  <div className="pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Care Requirements</span>
+                    <p className="text-xs font-semibold text-slate-700 leading-relaxed bg-white p-3 rounded-xl border border-slate-100 mt-1">
+                      {activeBooking?.patient?.careRequirements?.join(', ') || patient?.careRequirements?.join(', ') || 'No custom requirements specified.'}
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Service Type</span>
+                    <span className="text-sm font-bold text-slate-900">{activeBooking?.service?.title || 'Nursing Support'}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Schedule</span>
+                    <span className="text-xs font-bold text-slate-900">
+                      {new Date(activeBooking?.startDate).toLocaleDateString()} - {new Date(activeBooking?.endDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Assigned Caregiver</span>
+                    <span className="text-sm font-bold text-slate-900">{activeBooking?.caregiver?.name || 'TBD'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Current Status</span>
+                    <Badge className={`${activeBookingStyles.badge} border-none text-[9px] font-black uppercase px-2.5 py-0.5`}>
+                      {activeBooking?.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => setIsCarePlanOpen(false)}
+                  className="w-full h-14 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-widest shadow-xl"
+                >
+                  Close Plan
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* New Booking Modal */}
       <AnimatePresence>
@@ -1149,7 +1533,7 @@ export function UserDashboard() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Schedule Care Service</h3>
-                  <p className="text-xs text-slate-400 font-medium mt-1">Select a certified service and preferred clinical dates.</p>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Select a service and preferred care schedule dates.</p>
                 </div>
               </div>
 
@@ -1179,9 +1563,7 @@ export function UserDashboard() {
                           )
                         )
                       ).map(s => {
-                        const matchingCg = caregivers.filter((cg: any) => cg.isVerified && cg.specialties && cg.specialties.some((sp: string) => sp.toLowerCase().includes(s.title.toLowerCase()) || s.title.toLowerCase().includes(sp.toLowerCase())));
-                        const minRate = matchingCg.length > 0 ? Math.min(...matchingCg.map((c: any) => c.hourlyRate || 9999)) : null;
-                        const priceLabel = minRate && minRate !== 9999 ? `From $${minRate}/hr` : s.priceRange;
+                        const priceLabel = "Standard Rates";
                         return (
                           <option key={s._id} value={s._id}>{s.title} ({priceLabel})</option>
                         );
@@ -1407,7 +1789,7 @@ export function UserDashboard() {
                   <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
                     {patient ? 'Edit Patient Profile' : 'Configure Patient Profile'}
                   </h3>
-                  <p className="text-xs text-slate-400 font-medium mt-1">Configure clinical characteristics, emergency contact, and care details.</p>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Configure care preferences, contact details, and requirements.</p>
                 </div>
               </div>
 
@@ -1423,6 +1805,7 @@ export function UserDashboard() {
                         type="text"
                         value={profileForm.name}
                         onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                        onBlur={(e) => setProfileForm({ ...profileForm, name: toProperCase(e.target.value) })}
                         required
                         placeholder="e.g. Robert Williams"
                         className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
@@ -1491,7 +1874,7 @@ export function UserDashboard() {
                       <input 
                         type="text"
                         value={profileForm.phone}
-                        onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                        onChange={(e) => setProfileForm({ ...profileForm, phone: cleanPhone(e.target.value) })}
                         required
                         placeholder="555-0192"
                         className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
@@ -1511,47 +1894,62 @@ export function UserDashboard() {
                   </div>
                 </div>
 
-                {/* Section 3: Emergency Contact */}
-                <div className="space-y-4">
-                  <h4 className="text-xs font-black text-primary uppercase tracking-widest border-b border-slate-100 pb-2">3. Emergency Contact</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Contact Name *</label>
-                      <input 
-                        type="text"
-                        value={profileForm.emergencyContactName}
-                        onChange={(e) => setProfileForm({ ...profileForm, emergencyContactName: e.target.value })}
-                        required
-                        placeholder="Sarah Williams"
-                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Contact Phone *</label>
-                      <input 
-                        type="text"
-                        value={profileForm.emergencyContactPhone}
-                        onChange={(e) => setProfileForm({ ...profileForm, emergencyContactPhone: e.target.value })}
-                        required
-                        placeholder="555-0193"
-                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Relationship *</label>
-                      <input 
-                        type="text"
-                        value={profileForm.emergencyContactRelation}
-                        onChange={(e) => setProfileForm({ ...profileForm, emergencyContactRelation: e.target.value })}
-                        required
-                        placeholder="Daughter / Son / Spouse"
-                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                      />
-                    </div>
+                 {/* Section 3: Primary Contact */}
+                 <div className="space-y-4">
+                   <h4 className="text-xs font-black text-primary uppercase tracking-widest border-b border-slate-100 pb-2">3. Primary Contact</h4>
+                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                     <div>
+                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Contact Name *</label>
+                       <input 
+                         type="text"
+                         value={profileForm.emergencyContactName}
+                         onChange={(e) => setProfileForm({ ...profileForm, emergencyContactName: e.target.value })}
+                         onBlur={(e) => setProfileForm({ ...profileForm, emergencyContactName: toProperCase(e.target.value) })}
+                         required
+                         placeholder="Sarah Williams"
+                         className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Contact Phone *</label>
+                       <input 
+                         type="text"
+                         value={profileForm.emergencyContactPhone}
+                         onChange={(e) => setProfileForm({ ...profileForm, emergencyContactPhone: cleanPhone(e.target.value) })}
+                         required
+                         placeholder="555-0193"
+                         className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Relationship *</label>
+                       <input 
+                         type="text"
+                         value={profileForm.emergencyContactRelation}
+                         onChange={(e) => setProfileForm({ ...profileForm, emergencyContactRelation: e.target.value })}
+                         required
+                         placeholder="Daughter / Son / Spouse"
+                         className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Notification Preference *</label>
+                       <select 
+                         value={profileForm.emergencyContactNotificationPreference}
+                         onChange={(e) => setProfileForm({ ...profileForm, emergencyContactNotificationPreference: e.target.value })}
+                         required
+                         className="w-full h-12 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                       >
+                         <option value="SMS">SMS Alerts</option>
+                         <option value="Email">Email Digests</option>
+                         <option value="Phone Call">Phone Calls</option>
+                         <option value="WhatsApp">WhatsApp</option>
+                       </select>
+                     </div>
                   </div>
                 </div>
 
-                {/* Section 4: Clinical Settings */}
+                {/* Section 4: Mobility & Support Needs */}
                 <div className="space-y-4">
                   <h4 className="text-xs font-black text-primary uppercase tracking-widest border-b border-slate-100 pb-2">4. Physical Mobility</h4>
                   <div>
@@ -1689,7 +2087,7 @@ export function UserDashboard() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Report Support Issue</h3>
-                  <p className="text-xs text-slate-400 font-medium mt-1">Submit complaints or dispute ticket related to this care session.</p>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Submit complaints or disputes related to this care session.</p>
                 </div>
               </div>
 
@@ -1699,7 +2097,7 @@ export function UserDashboard() {
                     <CheckCircle2 size={32} />
                   </div>
                   <h4 className="text-xl font-bold text-emerald-950 tracking-tight">Report Filed Successfully</h4>
-                  <p className="text-xs text-emerald-700 font-medium">Platform administrators have been notified. Ticket ID registered.</p>
+                  <p className="text-xs text-emerald-700 font-medium">Platform administrators have been notified. Dispute registered.</p>
                 </div>
               ) : (
                 <form onSubmit={handleComplaintSubmit} className="space-y-6">
@@ -1708,7 +2106,7 @@ export function UserDashboard() {
                     <Input
                       id="compTitle"
                       placeholder="e.g. Caregiver arrived late, Unprofessional behavior"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
                       value={complaintTitle}
                       onChange={e => setComplaintTitle(e.target.value)}
                       required

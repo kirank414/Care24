@@ -47,7 +47,10 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 // Grant access to specific roles
 export const authorize = (...roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    const userRole = req.user?.role?.toLowerCase();
+    const authorizedRoles = roles.map(r => r.toLowerCase());
+
+    if (!req.user || !authorizedRoles.includes(userRole)) {
       return res.status(403).json({
         message: `User role ${req.user?.role} is not authorized to access this route`,
       });

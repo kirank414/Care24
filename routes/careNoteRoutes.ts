@@ -26,15 +26,31 @@ router.post("/", protect, async (req: any, res) => {
     console.log(`Booking ID   : ${booking}`);
     console.log("Payload      :", JSON.stringify(req.body, null, 2));
 
-    // Resolve patient reference from the Booking
-    let patientId = req.body.patient;
-    if (!patientId && booking) {
-      const BookingModel = mongoose.model("Booking");
-      const bDoc: any = await BookingModel.findById(booking);
-      if (bDoc) {
-        patientId = bDoc.patient;
-      }
+    if (req.user.role !== "caregiver" && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Only caregivers and admins can submit care notes" });
     }
+
+    let caregiverId = caregiver;
+    if (req.user.role === "caregiver") {
+      const cgDoc = await Caregiver.findOne({ user: req.user._id });
+      if (!cgDoc) {
+        return res.status(403).json({ message: "Caregiver profile not found" });
+      }
+      caregiverId = cgDoc._id.toString();
+    }
+
+    // Resolve patient reference from the Booking
+    const BookingModel = mongoose.model("Booking");
+    const bDoc: any = await BookingModel.findById(booking);
+    if (!bDoc) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    if (req.user.role === "caregiver" && bDoc.caregiver.toString() !== caregiverId) {
+      return res.status(403).json({ message: "Not authorized. Caregiver is not assigned to this booking" });
+    }
+
+    const patientId = bDoc.patient;
 
     // Telemetry Alert Logic
     let isAlert = false;
@@ -67,7 +83,7 @@ router.post("/", protect, async (req: any, res) => {
 
     const careNote = await CareNote.create({
       booking,
-      caregiver,
+      caregiver: caregiverId,
       patient: patientId,
       note,
       bloodPressure,
@@ -166,6 +182,28 @@ router.get("/me", protect, async (req: any, res) => {
 // @access  Private
 router.get("/booking/:bookingId", protect, async (req: any, res) => {
   try {
+    const BookingModel = mongoose.model("Booking");
+    const booking = (await BookingModel.findById(req.params.bookingId).populate("patient caregiver")) as any;
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    if (req.user.role !== "admin") {
+      if (req.user.role === "caregiver") {
+        const Caregiver = mongoose.model("Caregiver");
+        const cg = (await Caregiver.findOne({ user: req.user._id })) as any;
+        if (!cg || (booking.caregiver as any)?._id.toString() !== cg._id.toString()) {
+          return res.status(403).json({ message: "Not authorized to access notes for this booking" });
+        }
+      } else {
+        const Patient = mongoose.model("Patient");
+        const pt = (await Patient.findOne({ user: req.user._id })) as any;
+        if (!pt || (booking.patient as any)?._id.toString() !== pt._id.toString()) {
+          return res.status(403).json({ message: "Not authorized to access notes for this booking" });
+        }
+      }
+    }
+
     const notes = await CareNote.find({ booking: req.params.bookingId })
       .populate("patient")
       .populate("caregiver")

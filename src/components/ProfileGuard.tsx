@@ -42,7 +42,7 @@ export function ProfileGuard({ children }: ProfileGuardProps) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
         <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Synchronizing Clinical Profile...</p>
+        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Loading Profile Details...</p>
       </div>
     );
   }

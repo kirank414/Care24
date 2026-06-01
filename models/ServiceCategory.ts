@@ -23,6 +23,10 @@ const serviceCategorySchema = new mongoose.Schema(
         type: String,
       },
     ],
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

@@ -26,7 +26,7 @@ export interface Service {
   icon: string;
   image?: string;
   duration?: string;
-  category: 'NURSING' | 'PHYSIO' | 'COMPANION' | 'DEMENTIA' | 'POST_OP';
+  category: 'NURSING' | 'PHYSIO' | 'COMPANION' | 'POST_OP';
 }
 
 export interface Booking {

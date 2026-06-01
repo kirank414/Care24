@@ -22,6 +22,7 @@ export interface PatientProfile {
     name: string;
     phone: string;
     relation: string;
+    notificationPreference?: string;
   };
 }
 
@@ -39,6 +40,7 @@ export interface CaregiverProfile {
   isVerified: boolean;
   rating: number;
   cities?: string[];
+  completedSessions?: number;
 }
 
 export interface ServiceCategory {
@@ -48,6 +50,7 @@ export interface ServiceCategory {
   priceRange: string;
   icon: string;
   features: string[];
+  isActive?: boolean;
 }
 
 export interface Booking {
@@ -191,6 +194,7 @@ interface CareStoreState {
   fetchInquiries: (admin?: boolean) => Promise<void>;
   submitInquiry: (data: { question: string; email?: string }) => Promise<any>;
   answerInquiry: (id: string, answer: string) => Promise<void>;
+  updateInquiryStatus: (id: string, status: string) => Promise<void>;
   fetchSettings: () => Promise<void>;
   updateSettings: (data: Partial<SystemSettings>) => Promise<void>;
   resetStore: () => void;
@@ -590,6 +594,20 @@ export const useCareStore = create<CareStoreState>((set) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.put(`/inquiries/${id}/answer`, { answer });
+      set((state) => ({
+        inquiries: state.inquiries.map((inq) => (inq._id === id ? res.data : inq)),
+        loading: false,
+      }));
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || err.message, loading: false });
+      throw err;
+    }
+  },
+
+  updateInquiryStatus: async (id, status) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.put(`/inquiries/${id}/status`, { status });
       set((state) => ({
         inquiries: state.inquiries.map((inq) => (inq._id === id ? res.data : inq)),
         loading: false,

@@ -10,10 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import { useCareStore } from '../stores/careStore';
 import { toast } from 'sonner';
+import { toProperCase, cleanPhone } from '@/src/utils/normalize';
 
 export function SetupPatientProfilePage() {
   const navigate = useNavigate();
   const { updatePatient, loading } = useCareStore();
+
 
   const [form, setForm] = useState({
     name: '',
@@ -27,6 +29,7 @@ export function SetupPatientProfilePage() {
     emergencyContactName: '',
     emergencyContactPhone: '',
     emergencyContactRelation: '',
+    emergencyContactNotificationPreference: 'SMS',
     mobilityStatus: 'Independent',
     chronicConditions: '',
     allergies: '',
@@ -73,23 +76,24 @@ export function SetupPatientProfilePage() {
     }
 
     if (!phoneRegex.test(form.emergencyContactPhone.trim())) {
-      toast.error('Please enter a valid Emergency Contact Phone Number');
+      toast.error('Please enter a valid Primary Contact Phone Number');
       return;
     }
 
     const payload = {
-      name: form.name.trim(),
+      name: toProperCase(form.name.trim()),
       imageUrl: form.imageUrl.trim(),
       age: ageNum,
       gender: form.gender,
       bloodGroup: cleanBloodGroup,
-      phone: form.phone.trim(),
+      phone: cleanPhone(form.phone),
       address: form.address.trim(),
       preferredLanguage: form.preferredLanguage.trim(),
       emergencyContact: {
-        name: form.emergencyContactName.trim(),
-        phone: form.emergencyContactPhone.trim(),
+        name: toProperCase(form.emergencyContactName.trim()),
+        phone: cleanPhone(form.emergencyContactPhone),
         relation: form.emergencyContactRelation.trim(),
+        notificationPreference: form.emergencyContactNotificationPreference,
       },
       mobilityStatus: form.mobilityStatus,
       chronicConditions: form.chronicConditions.split(',').map(s => s.trim()).filter(Boolean),
@@ -150,9 +154,10 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="name"
                       placeholder="e.g. Robert Williams"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.name}
                       onChange={e => setForm({ ...form, name: e.target.value })}
+                      onBlur={e => setForm({ ...form, name: toProperCase(e.target.value) })}
                     />
                   </div>
 
@@ -170,7 +175,7 @@ export function SetupPatientProfilePage() {
                       id="age"
                       type="number"
                       placeholder="e.g. 74"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.age}
                       onChange={e => setForm({ ...form, age: e.target.value })}
                     />
@@ -179,7 +184,7 @@ export function SetupPatientProfilePage() {
                     <Label htmlFor="gender" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Gender *</Label>
                     <select
                       id="gender"
-                      className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none px-3"
+                      className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800 outline-none px-3"
                       value={form.gender}
                       onChange={e => setForm({ ...form, gender: e.target.value })}
                     >
@@ -205,19 +210,20 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="bloodGroup"
                       placeholder="e.g. O+"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.bloodGroup}
                       onChange={e => setForm({ ...form, bloodGroup: e.target.value })}
+                      onBlur={e => setForm({ ...form, bloodGroup: e.target.value.toUpperCase().trim() })}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Phone Number *</Label>
                     <Input
                       id="phone"
-                      placeholder="e.g. 555-0192"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      placeholder="e.g. +15550192"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.phone}
-                      onChange={e => setForm({ ...form, phone: e.target.value })}
+                      onChange={e => setForm({ ...form, phone: cleanPhone(e.target.value) })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -225,7 +231,7 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="preferredLanguage"
                       placeholder="e.g. English"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.preferredLanguage}
                       onChange={e => setForm({ ...form, preferredLanguage: e.target.value })}
                     />
@@ -238,7 +244,7 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="address"
                       placeholder="Enter full address"
-                      className="pl-12 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="pl-12 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.address}
                       onChange={e => setForm({ ...form, address: e.target.value })}
                     />
@@ -246,33 +252,34 @@ export function SetupPatientProfilePage() {
                 </div>
               </div>
 
-              {/* Section 3: Emergency Contact */}
+              {/* Section 3: Primary Contact */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3 pb-2 border-b border-slate-100">
-                  <div className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center font-bold">
-                    <ShieldAlert size={16} />
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                    <Phone size={16} />
                   </div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest text-red-600">3. Emergency Contact</h3>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest text-blue-600">3. Primary Contact</h3>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="ecName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Contact Name *</Label>
                     <Input
                       id="ecName"
                       placeholder="e.g. Sarah Williams"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.emergencyContactName}
                       onChange={e => setForm({ ...form, emergencyContactName: e.target.value })}
+                      onBlur={e => setForm({ ...form, emergencyContactName: toProperCase(e.target.value) })}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="ecPhone" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Contact Phone *</Label>
                     <Input
                       id="ecPhone"
-                      placeholder="e.g. 555-0193"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      placeholder="e.g. +15550193"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.emergencyContactPhone}
-                      onChange={e => setForm({ ...form, emergencyContactPhone: e.target.value })}
+                      onChange={e => setForm({ ...form, emergencyContactPhone: cleanPhone(e.target.value) })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -280,10 +287,24 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="ecRelation"
                       placeholder="e.g. Daughter"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.emergencyContactRelation}
                       onChange={e => setForm({ ...form, emergencyContactRelation: e.target.value })}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ecNotificationPref" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Notification Preference *</Label>
+                    <select
+                      id="ecNotificationPref"
+                      className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800 outline-none px-3"
+                      value={form.emergencyContactNotificationPreference}
+                      onChange={e => setForm({ ...form, emergencyContactNotificationPreference: e.target.value })}
+                    >
+                      <option value="SMS">SMS Alerts</option>
+                      <option value="Email">Email Digests</option>
+                      <option value="Phone Call">Phone Calls</option>
+                      <option value="WhatsApp">WhatsApp</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -301,7 +322,7 @@ export function SetupPatientProfilePage() {
                     <Label htmlFor="mobility" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Mobility Status</Label>
                     <select
                       id="mobility"
-                      className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none px-3"
+                      className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800 outline-none px-3"
                       value={form.mobilityStatus}
                       onChange={e => setForm({ ...form, mobilityStatus: e.target.value })}
                     >
@@ -316,7 +337,7 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="chronic"
                       placeholder="e.g. Hypertension, Diabetes"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.chronicConditions}
                       onChange={e => setForm({ ...form, chronicConditions: e.target.value })}
                     />
@@ -329,7 +350,7 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="allergies"
                       placeholder="e.g. Penicillin, Peanuts"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.allergies}
                       onChange={e => setForm({ ...form, allergies: e.target.value })}
                     />
@@ -339,7 +360,7 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="medications"
                       placeholder="e.g. Metformin 500mg, Lisinopril 10mg"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.currentMedications}
                       onChange={e => setForm({ ...form, currentMedications: e.target.value })}
                     />
@@ -352,7 +373,7 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="history"
                       placeholder="e.g. Stroke in 2023, Heart Surgery"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.medicalHistory}
                       onChange={e => setForm({ ...form, medicalHistory: e.target.value })}
                     />
@@ -362,7 +383,7 @@ export function SetupPatientProfilePage() {
                     <Input
                       id="requirements"
                       placeholder="e.g. Medication Administration, Physiotherapy"
-                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.careRequirements}
                       onChange={e => setForm({ ...form, careRequirements: e.target.value })}
                     />

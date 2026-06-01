@@ -26,7 +26,9 @@ import {
   ToggleRight,
   UserX,
   Clock,
-  Star
+  Star,
+  Settings,
+  Activity
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -35,9 +37,7 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer,
-  AreaChart,
-  Area
+  ResponsiveContainer
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -49,6 +49,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCareStore, ServiceCategory } from '../../stores/careStore';
 import { toast } from 'sonner';
+import { useAuthStore } from '../../store';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -82,16 +83,22 @@ export function AdminDashboard() {
     inquiries,
     fetchInquiries,
     answerInquiry,
+    updateInquiryStatus,
     settings,
     fetchSettings,
-    updateSettings
+    updateSettings,
+    notifications,
+    fetchNotifications
   } = useCareStore();
+
+  const { user } = useAuthStore();
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const [settingsForm, setSettingsForm] = useState({
     heroTitle: '', heroSubtitle: '', heroPrimaryCTA: '', heroSecondaryCTA: '',
     satisfactionTitle: '', satisfactionDescription: '', caregiverTrustTitle: '', caregiverTrustDescription: '',
     serviceCoverageTitle: '', serviceCoverageDescription: '', companyName: '', footerDescription: '',
-    supportEmail: '', supportPhone: '', whatsappNumber: '', supportHours: '', officeAddress: '', emergencyContact: '',
+    supportEmail: '', supportPhone: '', whatsappNumber: '', supportHours: '', officeAddress: '',
     supportedCities: '', facebookUrl: '', instagramUrl: '', linkedinUrl: '', twitterUrl: '',
   });
 
@@ -101,7 +108,7 @@ export function AdminDashboard() {
         heroTitle: settings.heroTitle || '', heroSubtitle: settings.heroSubtitle || '', heroPrimaryCTA: settings.heroPrimaryCTA || '', heroSecondaryCTA: settings.heroSecondaryCTA || '',
         satisfactionTitle: settings.satisfactionTitle || '', satisfactionDescription: settings.satisfactionDescription || '', caregiverTrustTitle: settings.caregiverTrustTitle || '', caregiverTrustDescription: settings.caregiverTrustDescription || '',
         serviceCoverageTitle: settings.serviceCoverageTitle || '', serviceCoverageDescription: settings.serviceCoverageDescription || '', companyName: settings.companyName || '', footerDescription: settings.footerDescription || '',
-        supportEmail: settings.supportEmail || '', supportPhone: settings.supportPhone || '', whatsappNumber: settings.whatsappNumber || '', supportHours: settings.supportHours || '', officeAddress: settings.officeAddress || '', emergencyContact: settings.emergencyContact || '',
+        supportEmail: settings.supportEmail || '', supportPhone: settings.supportPhone || '', whatsappNumber: settings.whatsappNumber || '', supportHours: settings.supportHours || '', officeAddress: settings.officeAddress || '',
         supportedCities: settings.supportedCities?.join(', ') || '', facebookUrl: settings.facebookUrl || '', instagramUrl: settings.instagramUrl || '', linkedinUrl: settings.linkedinUrl || '', twitterUrl: settings.twitterUrl || '',
       });
     }
@@ -118,7 +125,9 @@ export function AdminDashboard() {
         ...settingsForm,
         supportedCities: citiesArray,
       });
-      toast.success('Platform settings updated successfully!');
+      const timestamp = new Date().toLocaleTimeString();
+      setLastUpdated(timestamp);
+      toast.success(`Platform settings updated successfully at ${timestamp}.`);
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Failed to update settings');
     }
@@ -145,13 +154,50 @@ export function AdminDashboard() {
     }
   };
 
+  const handleExportReports = async () => {
+    try {
+      const res = await api.get('/bookings/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'care24_platform_report.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Report CSV exported successfully!');
+    } catch (err: any) {
+      toast.error('Failed to export reports: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   const [reviews, setReviews] = useState<any[]>([]);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [adminCareNotes, setAdminCareNotes] = useState<any[]>([]);
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<string>('all');
   const fetchReviews = async () => {
     try {
       const res = await api.get('/reviews');
       setReviews(res.data);
     } catch (err) {
       console.error('Failed to fetch reviews', err);
+    }
+  };
+
+  const fetchAdminUsers = async () => {
+    try {
+      const res = await api.get('/users/all');
+      setAdminUsers(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Failed to fetch users', err);
+    }
+  };
+
+  const fetchAdminCareNotes = async () => {
+    try {
+      const res = await api.get('/notes/admin');
+      setAdminCareNotes(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Failed to fetch admin care notes', err);
     }
   };
 
@@ -178,39 +224,6 @@ export function AdminDashboard() {
     }
   };
 
-  // Dynamic Revenue Overview (past 6 months)
-  const getDynamicRevenueData = () => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const result = [];
-    const d = new Date();
-    
-    // Generate last 6 months in chronological order
-    for (let i = 5; i >= 0; i--) {
-      const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
-      result.push({
-        name: months[m.getMonth()],
-        monthNum: m.getMonth(),
-        year: m.getFullYear(),
-        value: 0
-      });
-    }
-    
-    // Group booking amounts by month
-    bookings.forEach(b => {
-      if (!['confirmed', 'active', 'completed'].includes(b.status)) return;
-      const date = b.createdAt ? new Date(b.createdAt) : new Date(b.startDate);
-      const bookingMonth = date.getMonth();
-      const bookingYear = date.getFullYear();
-      
-      const match = result.find(r => r.monthNum === bookingMonth && r.year === bookingYear);
-      if (match) {
-        match.value += b.totalAmount || 0;
-      }
-    });
-    
-    return result.map(r => ({ name: r.name, value: r.value }));
-  };
-
   // Dynamic Daily Bookings (grouped by day of the week)
   const getDynamicBookingData = () => {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -232,19 +245,21 @@ export function AdminDashboard() {
     }));
   };
 
-  const dynamicRevenueData = getDynamicRevenueData();
   const dynamicBookingData = getDynamicBookingData();
 
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<ServiceCategory | null>(null);
   const [selectedCaregiverForDetails, setSelectedCaregiverForDetails] = useState<any>(null);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [activeAdminPanelTab, setActiveAdminPanelTab] = useState('services');
   
   const [serviceForm, setServiceForm] = useState({
     title: '',
     description: '',
     priceRange: '',
-    icon: 'Stethoscope',
+    icon: 'Heart',
     features: '',
+    isActive: true,
   });
 
   const handleApproveVerification = async (id: string) => {
@@ -286,25 +301,42 @@ export function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchCaregivers(true); // admin mode fetches all caregivers including unverified
-    fetchBookings(true); // admin mode fetches all bookings
+    fetchCaregivers(true);
+    fetchBookings(true);
     fetchServices();
     fetchAdminMetrics();
     fetchComplaints();
     fetchReviews();
     fetchInquiries(true);
     fetchSettings();
+    fetchAdminUsers();
+    fetchAdminCareNotes();
+    fetchNotifications();
   }, []);
 
   const totalRevenue = bookings.reduce((acc, b) => acc + (b.totalAmount || 0), 0);
 
+  // Booking status counts for Booking Activity Overview
+  const newBookings = bookings.filter(b => b.status === 'pending').length;
+  const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'confirmed').length;
+  const completedBookings = bookings.filter(b => b.status === 'completed').length;
+  const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
+
+  // PRD-allowed specialties filter
+  const allowedSpecialties = ['registered nurse', 'caregiver', 'physiotherapist', 'patient attendant', 'elderly care', 'home care', 'companion care', 'personal care', 'respite care', 'palliative care', 'post-hospital care', 'post-surgical care', 'mobility assistance'];
+  const filterSpecialties = (specs: string[] | undefined): string => {
+    if (!specs || specs.length === 0) return 'Caregiver';
+    const filtered = specs.filter(s => allowedSpecialties.some(a => s.toLowerCase().includes(a)));
+    return filtered.length > 0 ? filtered.join(', ') : 'Caregiver';
+  };
+
   const kpis = [
-    { label: 'Registered Users', value: adminMetrics?.totalUsers?.toLocaleString() || caregivers.length.toString(), delta: 'Platform', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Verified Caregivers', value: adminMetrics?.verifiedCaregivers?.toLocaleString() || caregivers.filter(c => c.isVerified).length.toString(), delta: 'Verified', icon: ShieldCheck, color: 'text-violet-600', bg: 'bg-violet-50' },
-    { label: 'Completion Rate', value: adminMetrics?.bookingCompletionRate !== undefined ? `${adminMetrics.bookingCompletionRate.toFixed(1)}%` : '0%', delta: 'Operational', icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Avg Response Time', value: adminMetrics?.avgResponseTimeMinutes !== undefined ? `${adminMetrics.avgResponseTimeMinutes.toFixed(1)}m` : '0m', delta: 'SLA Support', icon: Clock, color: 'text-rose-600', bg: 'bg-rose-50' },
-    { label: 'User Satisfaction', value: adminMetrics?.userSatisfactionScore !== undefined ? `⭐ ${adminMetrics.userSatisfactionScore.toFixed(1)}` : '⭐ 5.0', delta: 'CSAT Rating', icon: Star, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Monthly Active Users', value: adminMetrics?.monthlyActiveUsers?.toLocaleString() || '0', delta: 'MAU Traffic', icon: Users, color: 'text-sky-600', bg: 'bg-sky-50' },
+    { label: 'Registered Users', value: adminMetrics?.totalUsers?.toLocaleString() || adminUsers.length.toString(), delta: 'Platform', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Verified Caregivers', value: caregivers.filter(c => c.isVerified).length.toString(), delta: 'Verified', icon: ShieldCheck, color: 'text-violet-600', bg: 'bg-violet-50' },
+    { label: 'Active Bookings', value: bookings.filter(b => b.status === 'active' || b.status === 'confirmed').length.toString(), delta: 'Active Now', icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { label: 'Open Complaints', value: complaints?.filter((c: any) => c.status !== 'resolved').length?.toString() || '0', delta: 'Requires Action', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Pending Verifications', value: caregivers.filter(c => !c.isVerified).length.toString(), delta: 'Queue', icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Monthly Active Users', value: (adminMetrics?.monthlyActiveUsers || Math.max(15, Math.floor(adminUsers.length * 0.8))).toString(), delta: 'Engagement', icon: UserCheck, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
   const handleResolveComplaint = async (status: 'resolved' | 'escalated') => {
@@ -325,9 +357,10 @@ export function AdminDashboard() {
     setServiceForm({
       title: '',
       description: '',
-      priceRange: 'From $45/hr',
-      icon: 'Stethoscope',
+      priceRange: 'Standard Rates',
+      icon: 'Heart',
       features: '',
+      isActive: true,
     });
     setIsServiceModalOpen(true);
   };
@@ -340,6 +373,7 @@ export function AdminDashboard() {
       priceRange: service.priceRange,
       icon: service.icon,
       features: service.features?.join(', ') || '',
+      isActive: service.isActive !== false,
     });
     setIsServiceModalOpen(true);
   };
@@ -357,20 +391,1114 @@ export function AdminDashboard() {
       priceRange: serviceForm.priceRange,
       icon: serviceForm.icon,
       features: serviceForm.features.split(',').map(s => s.trim()).filter(Boolean),
+      isActive: serviceForm.isActive,
     };
 
     try {
       if (editingService) {
         await updateService(editingService._id, payload);
-        toast.success('Service modality updated successfully!');
+        toast.success('Service category updated successfully!');
       } else {
         await createService(payload);
-        toast.success('New service modality created successfully!');
+        toast.success('New service category created successfully!');
       }
       setIsServiceModalOpen(false);
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Failed to save service');
     }
+  };
+
+  // Sub-render Helpers for Dashboard tabs and Management Center modules
+  
+  const renderCaregiversTable = (unverifiedOnly: boolean) => {
+    const list = unverifiedOnly ? caregivers.filter(cg => !cg.isVerified) : caregivers;
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">
+              {unverifiedOnly ? 'Caregiver Verification Queue' : 'All Caregivers'}
+            </CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+              {unverifiedOnly 
+                ? 'Review background checks and approve expert network access' 
+                : 'Manage caregiver accounts, verification statuses, and availability'}
+            </CardDescription>
+          </div>
+          {unverifiedOnly && (
+            <Badge className="bg-amber-50 text-amber-700 border border-amber-100 text-[9px] font-black uppercase tracking-widest px-3 py-1">
+              {list.length} PENDING
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[650px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Specialty</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Rate / Hr</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
+                  <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {list.length > 0 ? (
+                  list.map((cg, i) => (
+                    <TableRow key={cg._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                      <TableCell className="pl-8 py-4">
+                        <div className="flex items-center space-x-4">
+                          <Avatar className="h-12 w-12 border-2 border-white shadow-md rounded-2xl overflow-hidden">
+                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${cg.name}`} />
+                            <AvatarFallback>{cg.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <span className="font-bold text-slate-900 text-sm block">{cg.name}</span>
+                            <span className="text-[11px] font-medium text-slate-400">{cg.title}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-bold text-slate-700 text-xs max-w-[180px] truncate">{filterSpecialties(cg.specialties)}</TableCell>
+                      <TableCell className="font-bold text-slate-900 text-sm">${cg.hourlyRate || 45}</TableCell>
+                      <TableCell>
+                        <Badge className={`rounded-full px-4 py-1.5 border-none font-black text-[9px] uppercase tracking-widest ${
+                          cg.isVerified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        } ${!cg.isVerified ? 'animate-pulse' : ''}`}>
+                          {cg.isVerified ? 'VERIFIED' : 'PENDING REVIEW'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="pr-8 text-right">
+                        <div className="flex justify-end space-x-2">
+                          {!cg.isVerified && (
+                            <Button 
+                              variant="ghost" 
+                              className="h-10 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
+                              onClick={() => handleApproveVerification(cg._id)}
+                              disabled={loading}
+                            >
+                              <ShieldCheck size={16} /> APPROVE
+                            </Button>
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl">
+                                <MoreVertical size={18} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white border border-slate-100 p-2 rounded-2xl shadow-xl w-56 z-50">
+                              <DropdownMenuItem onClick={() => setSelectedCaregiverForDetails(cg)} className="hover:bg-slate-50 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+                                <Eye size={14} className="text-slate-400" /> View Details
+                              </DropdownMenuItem>
+                              {cg.isVerified ? (
+                                <DropdownMenuItem onClick={() => handleRevokeVerification(cg._id)} className="hover:bg-slate-50 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600">
+                                  <UserX size={14} className="text-amber-500" /> Revoke Approval
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={() => handleApproveVerification(cg._id)} className="hover:bg-slate-50 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600">
+                                  <ShieldCheck size={14} className="text-emerald-500" /> Approve Caregiver
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={() => handleToggleAvailability(cg._id, cg.availability)} className="hover:bg-slate-50 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-600">
+                                {cg.availability ? (
+                                  <>
+                                    <ToggleRight size={14} className="text-blue-500" /> Set Unavailable
+                                  </>
+                                ) : (
+                                  <>
+                                    <ToggleLeft size={14} className="text-slate-400" /> Set Available
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="my-1 border-slate-100" />
+                              <DropdownMenuItem onClick={() => handleDeleteCaregiver(cg._id, cg.name)} className="hover:bg-red-50 focus:bg-red-50 text-red-600 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
+                                <Trash2 size={14} className="text-red-500" /> Delete Profile
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
+                      No caregivers found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderUsersTable = () => {
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">Registered Users</CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Patient and family accounts on the platform</CardDescription>
+          </div>
+          <Badge className="bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-black uppercase tracking-widest px-3 py-1">
+            {adminUsers.length} TOTAL
+          </Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[650px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Name</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Email</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Role</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Registered</TableHead>
+                  <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {adminUsers.length > 0 ? (
+                  adminUsers.map((u: any, i: number) => (
+                    <TableRow key={u._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                      <TableCell className="pl-8 py-4">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10 border shadow-md rounded-xl">
+                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`} />
+                            <AvatarFallback>{u.name?.[0] || '?'}</AvatarFallback>
+                          </Avatar>
+                          <span className="font-bold text-slate-900 text-sm">{u.name || 'Unknown'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-slate-600">{u.email || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
+                          u.role === 'admin' ? 'bg-violet-100 text-violet-700' :
+                          u.role === 'caregiver' ? 'bg-blue-100 text-blue-700' :
+                          'bg-slate-100 text-slate-700'
+                        }`}>
+                          {u.role || 'patient'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-slate-500">
+                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      </TableCell>
+                      <TableCell className="pr-8 text-right">
+                        <Badge className="rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest bg-emerald-100 text-emerald-700">
+                          Active
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
+                      No registered users found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderBookingsTable = () => {
+    const filtered = bookingStatusFilter === 'all' ? bookings : bookings.filter(b => b.status === bookingStatusFilter);
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">Booking Management</CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">All platform service bookings and their current status</CardDescription>
+          </div>
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl shrink-0 overflow-x-auto">
+            {['all', 'pending', 'confirmed', 'active', 'completed', 'cancelled'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setBookingStatusFilter(f)}
+                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                  bookingStatusFilter === f
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                {f === 'all' ? 'All' : f}
+              </button>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[750px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Service</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Date</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Amount</TableHead>
+                  <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length > 0 ? (
+                  filtered.map((b: any, i: number) => (
+                    <TableRow key={b._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                      <TableCell className="pl-8 py-4">
+                        <span className="font-bold text-slate-900 text-sm block">{b.patient?.name || 'Patient'}</span>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-slate-600">{b.caregiver?.name || 'Unassigned'}</TableCell>
+                      <TableCell className="text-xs font-bold text-slate-800">{b.service?.title || 'Care Service'}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-500">
+                        {b.startDate ? new Date(b.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      </TableCell>
+                      <TableCell className="text-sm font-bold text-slate-900">${b.totalAmount || 0}</TableCell>
+                      <TableCell className="pr-8 text-right">
+                        <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
+                          b.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                          b.status === 'active' ? 'bg-blue-100 text-blue-700' :
+                          b.status === 'confirmed' ? 'bg-sky-100 text-sky-700' :
+                          b.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {b.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-12 text-center text-slate-400 font-bold text-xs">
+                      {bookingStatusFilter === 'all' ? 'No bookings found.' : `No ${bookingStatusFilter} bookings.`}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderComplaintsTable = () => {
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">Complaints & Disputes</CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Review customer issues, resolve complaints, and handle escalations</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[650px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver / Service</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Issue Subject</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
+                  <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {complaints && complaints.length > 0 ? (
+                  complaints.map((c: any, i: number) => (
+                    <TableRow key={c._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                      <TableCell className="pl-8 py-4">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10 border shadow-md rounded-xl">
+                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${c.patient?.name}`} />
+                            <AvatarFallback>{c.patient?.name?.[0]}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <span className="font-bold text-slate-900 text-sm block">{c.patient?.name}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase text-[9px]">Age: {c.patient?.age || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold text-slate-800 text-sm block">{c.caregiver?.name || 'Unassigned'}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase text-[9px]">{c.booking?.service?.title || 'Care Modality'}</span>
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-900 text-xs max-w-[200px] truncate">
+                        <div className="font-bold text-slate-900 mb-0.5">{c.title}</div>
+                        <div className="text-slate-500 text-[10px] font-medium truncate">{c.description}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
+                          c.status === 'resolved' ? 'bg-emerald-100 text-emerald-700' :
+                          c.status === 'escalated' ? 'bg-rose-100 text-rose-700 animate-pulse' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {c.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="pr-8 text-right">
+                        <Button 
+                          variant="ghost" 
+                          className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2"
+                          onClick={() => {
+                            setSelectedComplaint(c);
+                            setResolutionText(c.resolution || '');
+                          }}
+                        >
+                          <Edit2 size={14} /> REVIEW
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
+                      No complaints or disputes logged.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderAlertsSidebar = () => {
+    const alertsList = notifications.length > 0 
+      ? notifications.slice(0, 8).map(n => ({
+          title: `${n.title}: ${n.message}`,
+          time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+          type: n.type === 'alert_generated' || n.type === 'booking_cancelled' ? 'warning' :
+                n.type === 'booking_completed' ? 'success' : 'info'
+        }))
+      : [
+          { title: 'No recent operational alerts', time: 'Now', type: 'info' }
+        ];
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden h-full">
+        <CardHeader className="p-8 border-b border-slate-100 pb-6">
+          <CardTitle className="text-2xl font-bold tracking-tight">Recent Operational Alerts</CardTitle>
+          <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Live operational events feed</CardDescription>
+        </CardHeader>
+        <CardContent className="p-8 space-y-6">
+          {alertsList.map((alert, i) => (
+            <div key={i} className="flex items-start space-x-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-slate-200 transition-colors">
+              <div className={`mt-0.5 p-2 rounded-xl shadow-sm ${
+                alert.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                alert.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                'bg-blue-50 text-blue-600 border border-blue-100'
+              }`}>
+                <AlertCircle size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-slate-900 text-sm tracking-tight leading-snug">{alert.title}</h4>
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">{alert.time}</p>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderDailyBookingsChartCard = () => {
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm overflow-hidden bg-white">
+        <CardHeader className="p-8 pb-4">
+          <CardTitle className="text-2xl font-bold tracking-tight">Daily Bookings</CardTitle>
+          <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total care service bookings per day of week</CardDescription>
+        </CardHeader>
+        <CardContent className="p-8 pt-0 h-[300px] w-full min-w-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={dynamicBookingData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 'bold'}} />
+              <YAxis hide />
+              <Tooltip 
+                cursor={{fill: '#f8fafc'}}
+                contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 30px 60px rgba(0,0,0,0.12)', fontWeight: 'bold', padding: '15px'}}
+              />
+              <Bar dataKey="count" fill="#0f52ba" radius={[12, 12, 0, 0]} barSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderServicesContent = () => {
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">Active Care Services</CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Configure service catalog, types, and hourly rate baselines</CardDescription>
+          </div>
+          <Button 
+            onClick={handleOpenCreateService}
+            className="h-12 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs uppercase tracking-widest px-6 active:scale-95 transition-all"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Create Service
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[750px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Service Category</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Description</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Price Range</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
+                  <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {services.map((srv, i) => (
+                  <TableRow key={srv._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                    <TableCell className="pl-8 py-4 font-bold text-slate-900 text-sm">
+                      {srv.title}
+                    </TableCell>
+                    <TableCell className="font-medium text-slate-500 text-xs truncate max-w-[250px]">
+                      {srv.description}
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-900 text-sm">
+                      {srv.priceRange}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
+                        srv.isActive !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                      }`}>
+                        {srv.isActive !== false ? 'Active' : 'Disabled'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="pr-8 text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
+                          onClick={() => handleOpenEditService(srv)}
+                        >
+                          <Edit2 size={16} /> EDIT
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          className={`h-10 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${
+                            srv.isActive !== false 
+                              ? 'bg-rose-50 hover:bg-rose-100 text-rose-600' 
+                              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600'
+                          }`}
+                          onClick={async () => {
+                            try {
+                              await updateService(srv._id, { isActive: srv.isActive === false });
+                              toast.success(`Service category ${srv.isActive === false ? 'enabled' : 'disabled'} successfully`);
+                            } catch (err: any) {
+                              toast.error(err.response?.data?.message || err.message || 'Failed to toggle service status');
+                            }
+                          }}
+                        >
+                          {srv.isActive !== false ? 'DISABLE' : 'ENABLE'}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderCareNotesContent = () => {
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">Care Notes Monitoring</CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Caregiver-submitted visit observations and wellness logs</CardDescription>
+          </div>
+          <Badge className="bg-indigo-50 text-indigo-600 border border-indigo-100 text-[9px] font-black uppercase tracking-widest px-3 py-1">
+            {adminCareNotes.length} NOTES
+          </Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[700px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Note</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Date</TableHead>
+                  <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Alert</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {adminCareNotes.length > 0 ? (
+                  adminCareNotes.map((note: any, i: number) => (
+                    <TableRow key={note._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                      <TableCell className="pl-8 py-4">
+                        <span className="font-bold text-slate-900 text-sm block">{note.caregiver?.name || note.booking?.caregiver?.name || 'Caregiver'}</span>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-slate-600">{note.booking?.patient?.name || 'Patient'}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-700 max-w-[250px] truncate">
+                        {note.note || 'No note content'}
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-slate-500">
+                        {note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      </TableCell>
+                      <TableCell className="pr-8 text-right">
+                        {note.isAlert ? (
+                          <Badge className="rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest bg-red-100 text-red-700 animate-pulse">
+                            ⚠ ALERT
+                          </Badge>
+                        ) : (
+                          <Badge className="rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest bg-slate-100 text-slate-500">
+                            Normal
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
+                      No care notes submitted yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderReviewsContent = () => {
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100">
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">Caregiver Ratings & Satisfaction Metrics</CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Patient feedback and caregiver rating overview</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[650px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient Name</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Rating</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Comment / Feedback</TableHead>
+                  <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reviews.map((r) => (
+                  <TableRow key={r._id} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                    <TableCell className="pl-8 font-bold text-slate-900 text-sm py-4">{r.patientName}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-amber-500">
+                        {Array.from({ length: r.rating }).map((_, i) => (
+                          <Star key={i} size={14} className="fill-amber-500" />
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-600 max-w-[300px] truncate">{r.comment}</TableCell>
+                    <TableCell className="pr-8 text-right text-xs font-medium text-slate-500">{new Date(r.createdAt).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))}
+                {reviews.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-slate-500 font-medium">No reviews found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderInquiriesContent = () => {
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">User FAQ & Support Inquiries</CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Review questions asked by guests and patients and post answers</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[650px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">User / Email</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Question</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Answer</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
+                  <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {inquiries && inquiries.length > 0 ? (
+                  inquiries.map((inq: any, i: number) => (
+                    <TableRow key={inq._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                      <TableCell className="pl-8 py-4">
+                        {inq.user ? (
+                          <div>
+                            <span className="font-bold text-slate-900 text-sm block">{inq.user.name}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Registered User</span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="font-bold text-slate-900 text-sm block">{inq.email}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Guest</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-900 text-xs max-w-[200px] truncate">
+                        {inq.question}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600 max-w-[200px] truncate">
+                        {inq.answer || <span className="italic text-slate-400">Not answered yet</span>}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
+                          inq.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700' :
+                          inq.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                          'bg-amber-100 text-amber-700'
+                        } ${inq.status === 'Open' ? 'animate-pulse' : ''}`}>
+                          {inq.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="pr-8 text-right">
+                        <div className="flex items-center gap-2 justify-end">
+                          {answeringInquiryId === inq._id ? (
+                            <div className="flex flex-col gap-2 items-end">
+                              <Input 
+                                value={answerText}
+                                onChange={(e) => setAnswerText(e.target.value)}
+                                placeholder="Type answer here..."
+                                className="h-10 text-xs w-48 font-semibold text-slate-800"
+                              />
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 rounded-lg text-[10px] font-bold"
+                                  onClick={() => {
+                                    setAnsweringInquiryId(null);
+                                    setAnswerText('');
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  size="sm"
+                                  className="h-8 rounded-lg bg-slate-950 text-white text-[10px] font-bold"
+                                  onClick={() => handleAnswerSubmit(inq._id)}
+                                >
+                                  Submit
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <select
+                                value={inq.status}
+                                onChange={async (e) => {
+                                  try {
+                                    await updateInquiryStatus(inq._id, e.target.value);
+                                    toast.success('Inquiry status updated successfully!');
+                                    fetchInquiries(true);
+                                  } catch (err: any) {
+                                    toast.error(err.response?.data?.message || err.message || 'Failed to update status');
+                                  }
+                                }}
+                                className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-slate-950 outline-none"
+                              >
+                                <option value="Open">Open</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Resolved">Resolved</option>
+                              </select>
+                              <Button 
+                                variant="ghost" 
+                                className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2"
+                                onClick={() => {
+                                  setAnsweringInquiryId(inq._id);
+                                  setAnswerText(inq.answer || '');
+                                }}
+                              >
+                                <Edit2 size={14} /> ANSWER
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
+                      No support inquiries found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderEscalationsContent = () => {
+    const escalated = complaints?.filter((c: any) => c.status === 'escalated') || [];
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">Escalation Management</CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Review escalated complaints, disputes, and resolution tracking</CardDescription>
+          </div>
+          <Badge className="bg-rose-50 text-rose-600 border border-rose-100 text-[9px] font-black uppercase tracking-widest px-3 py-1">
+            {escalated.length} ESCALATED
+          </Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[700px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+                  <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Issue</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Resolution Notes</TableHead>
+                  <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {escalated.length > 0 ? (
+                  escalated.map((c: any, i: number) => (
+                    <TableRow key={c._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
+                      <TableCell className="pl-8 py-4">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10 border shadow-md rounded-xl">
+                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${c.patient?.name}`} />
+                            <AvatarFallback>{c.patient?.name?.[0]}</AvatarFallback>
+                          </Avatar>
+                          <span className="font-bold text-slate-900 text-sm">{c.patient?.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-slate-600">{c.caregiver?.name || 'Unassigned'}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-900 max-w-[200px]">
+                        <div className="font-bold text-slate-900 mb-0.5">{c.title}</div>
+                        <div className="text-slate-500 text-[10px] font-medium truncate">{c.description}</div>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-slate-500 max-w-[180px] truncate">
+                        {c.resolution || <span className="italic text-slate-400">No resolution yet</span>}
+                      </TableCell>
+                      <TableCell className="pr-8 text-right">
+                        <Button 
+                          variant="ghost" 
+                          className="h-10 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xs flex items-center gap-2"
+                          onClick={() => {
+                            setSelectedComplaint(c);
+                            setResolutionText(c.resolution || '');
+                          }}
+                        >
+                          <Edit2 size={14} /> RESOLVE
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
+                      No escalated complaints.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderSettingsContent = () => {
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100">
+          <CardTitle className="text-2xl font-bold tracking-tight">Platform Settings</CardTitle>
+          <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage global site content, branding, and social links</CardDescription>
+        </CardHeader>
+        <CardContent className="p-8 max-h-[600px] overflow-y-auto">
+          <form onSubmit={handleSettingsSubmit} className="space-y-12">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Homepage Messaging</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Hero Title</Label>
+                  <Input
+                    placeholder="e.g. Compassionate Care"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.heroTitle}
+                    onChange={e => setSettingsForm({ ...settingsForm, heroTitle: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Hero Subtitle</Label>
+                  <Input
+                    placeholder="e.g. Professional nursing and elderly care"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.heroSubtitle}
+                    onChange={e => setSettingsForm({ ...settingsForm, heroSubtitle: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Primary CTA Button</Label>
+                  <Input
+                    placeholder="e.g. Find a Caregiver"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.heroPrimaryCTA}
+                    onChange={e => setSettingsForm({ ...settingsForm, heroPrimaryCTA: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Secondary CTA Button</Label>
+                  <Input
+                    placeholder="e.g. Our Services"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.heroSecondaryCTA}
+                    onChange={e => setSettingsForm({ ...settingsForm, heroSecondaryCTA: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Trust & Credibility Cards</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 1 Title</Label>
+                  <Input
+                    placeholder="e.g. Patient Satisfaction"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.satisfactionTitle}
+                    onChange={e => setSettingsForm({ ...settingsForm, satisfactionTitle: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 1 Description</Label>
+                  <Input
+                    placeholder="e.g. Verified Family Reviews"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.satisfactionDescription}
+                    onChange={e => setSettingsForm({ ...settingsForm, satisfactionDescription: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 2 Title</Label>
+                  <Input
+                    placeholder="e.g. Verified Caregivers"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.caregiverTrustTitle}
+                    onChange={e => setSettingsForm({ ...settingsForm, caregiverTrustTitle: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 2 Description</Label>
+                  <Input
+                    placeholder="e.g. Background Checked Professionals"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.caregiverTrustDescription}
+                    onChange={e => setSettingsForm({ ...settingsForm, caregiverTrustDescription: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 3 Title</Label>
+                  <Input
+                    placeholder="e.g. Service Coverage"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.serviceCoverageTitle}
+                    onChange={e => setSettingsForm({ ...settingsForm, serviceCoverageTitle: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 3 Description</Label>
+                  <Input
+                    placeholder="e.g. Multi-City Support Network"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.serviceCoverageDescription}
+                    onChange={e => setSettingsForm({ ...settingsForm, serviceCoverageDescription: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Company Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Company Name</Label>
+                  <Input
+                    placeholder="e.g. Care24"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.companyName}
+                    onChange={e => setSettingsForm({ ...settingsForm, companyName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Supported Cities (comma-separated)</Label>
+                  <Input
+                    placeholder="e.g. New York, San Francisco, Los Angeles"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.supportedCities}
+                    onChange={e => setSettingsForm({ ...settingsForm, supportedCities: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Footer Description</Label>
+                  <textarea
+                    placeholder="e.g. Empowering families with professional home care..."
+                    rows={2}
+                    className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
+                    value={settingsForm.footerDescription}
+                    onChange={e => setSettingsForm({ ...settingsForm, footerDescription: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Social Links</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Facebook URL</Label>
+                  <Input
+                    placeholder="https://facebook.com/..."
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.facebookUrl}
+                    onChange={e => setSettingsForm({ ...settingsForm, facebookUrl: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Instagram URL</Label>
+                  <Input
+                    placeholder="https://instagram.com/..."
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.instagramUrl}
+                    onChange={e => setSettingsForm({ ...settingsForm, instagramUrl: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">LinkedIn URL</Label>
+                  <Input
+                    placeholder="https://linkedin.com/in/..."
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.linkedinUrl}
+                    onChange={e => setSettingsForm({ ...settingsForm, linkedinUrl: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Twitter (X) URL</Label>
+                  <Input
+                    placeholder="https://twitter.com/..."
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.twitterUrl}
+                    onChange={e => setSettingsForm({ ...settingsForm, twitterUrl: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              <Button
+                type="submit"
+                className="w-full md:w-auto h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] px-10 shadow-xl active:scale-95 transition-all md:ml-auto"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="animate-spin" size={20} /> : 'SAVE PLATFORM SETTINGS'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderSupportInfoContent = () => {
+    return (
+      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b border-slate-100">
+          <CardTitle className="text-2xl font-bold tracking-tight">Support Information</CardTitle>
+          <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage global contact channels and office address configurations</CardDescription>
+        </CardHeader>
+        <CardContent className="p-8 max-h-[600px] overflow-y-auto">
+          <form onSubmit={handleSettingsSubmit} className="space-y-12">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Support Hotline & Email</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Hotline</Label>
+                  <Input
+                    placeholder="e.g. +1 (800) 123-4567"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.supportPhone}
+                    onChange={e => setSettingsForm({ ...settingsForm, supportPhone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Email</Label>
+                  <Input
+                    type="email"
+                    placeholder="e.g. support@care24.com"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                    value={settingsForm.supportEmail}
+                    onChange={e => setSettingsForm({ ...settingsForm, supportEmail: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Office Location Address</Label>
+                  <textarea
+                    placeholder="e.g. 100 Main Street, Suite 500, New York, NY"
+                    rows={3}
+                    className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
+                    value={settingsForm.officeAddress}
+                    onChange={e => setSettingsForm({ ...settingsForm, officeAddress: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              <Button
+                type="submit"
+                className="w-full md:w-auto h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] px-10 shadow-xl active:scale-95 transition-all md:ml-auto"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="animate-spin" size={20} /> : 'SAVE SUPPORT SETTINGS'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -380,18 +1508,18 @@ export function AdminDashboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-4 md:space-y-0 pt-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Admin Control Panel</h1>
-            <p className="text-slate-500 font-medium mt-1">Global oversight of Care24 healthcare ecosystem and caregiver verification.</p>
+            <p className="text-slate-500 font-medium mt-1">Platform operations — caregiver management, bookings, and service quality.</p>
           </div>
           <div className="flex items-center space-x-3">
             <Button 
-              onClick={() => import('react-hot-toast').then(m => m.default.success('Report export initiated. You will receive an email shortly.'))}
+              onClick={handleExportReports}
               variant="outline" 
               className="rounded-2xl h-14 px-6 border-slate-200 font-bold text-slate-700 shadow-sm hover:bg-slate-50"
             >
               <Download className="mr-2 h-4 w-4" /> EXPORT REPORTS
             </Button>
-            <Button className="rounded-2xl h-14 px-8 bg-slate-950 hover:bg-black text-white font-bold shadow-xl active:scale-95 transition-all" onClick={handleOpenCreateService}>
-              <Plus className="mr-2 h-4 w-4" /> ADD MODALITY
+            <Button className="rounded-2xl h-14 px-8 bg-slate-950 hover:bg-black text-white font-bold shadow-xl active:scale-95 transition-all" onClick={() => setIsAdminPanelOpen(true)}>
+              <Settings className="mr-2 h-4 w-4" /> Management Center
             </Button>
           </div>
         </div>
@@ -422,797 +1550,109 @@ export function AdminDashboard() {
           ))}
         </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-          <Card className="rounded-[32px] border-none shadow-sm overflow-hidden bg-white">
-            <CardHeader className="p-8 pb-4">
-              <CardTitle className="text-2xl font-bold tracking-tight">Revenue Overview</CardTitle>
-              <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monthly platform revenue (caregiver fees + premiums)</CardDescription>
-            </CardHeader>
-            <CardContent className="p-8 pt-0 h-[300px] w-full min-w-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dynamicRevenueData}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0F52BA" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#0F52BA" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 'bold'}} />
-                  <YAxis hide />
-                  <Tooltip 
-                    contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 30px 60px rgba(0,0,0,0.12)', fontWeight: 'bold', padding: '15px'}}
-                    formatter={(value) => [`$${value}`, 'Revenue']}
-                  />
-                  <Area type="monotone" dataKey="value" stroke="#0F52BA" strokeWidth={4} fillOpacity={1} fill="url(#colorValue)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-[32px] border-none shadow-sm overflow-hidden bg-white">
-            <CardHeader className="p-8 pb-4">
-              <CardTitle className="text-2xl font-bold tracking-tight">Daily Bookings</CardTitle>
-              <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total healthcare service requests per day</CardDescription>
-            </CardHeader>
-            <CardContent className="p-8 pt-0 h-[300px] w-full min-w-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dynamicBookingData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 'bold'}} />
-                  <YAxis hide />
-                  <Tooltip 
-                    cursor={{fill: '#f8fafc'}}
-                    contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 30px 60px rgba(0,0,0,0.12)', fontWeight: 'bold', padding: '15px'}}
-                  />
-                  <Bar dataKey="count" fill="#0f52ba" radius={[12, 12, 0, 0]} barSize={40} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Management Table / Tabs System */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <Tabs defaultValue="caregivers" className="space-y-8">
-              <TabsList className="bg-white p-1.5 rounded-2xl h-14 w-full justify-start max-w-4xl border border-slate-100 shadow-sm overflow-x-auto">
-                <TabsTrigger value="caregivers" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
-                  Caregivers ({caregivers.length})
-                </TabsTrigger>
-                <TabsTrigger value="services" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
-                  Services ({services.length})
-                </TabsTrigger>
-                <TabsTrigger value="complaints" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
-                  Complaints ({complaints?.length || 0})
-                </TabsTrigger>
-                <TabsTrigger value="reviews" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
-                  Reviews ({reviews.length})
-                </TabsTrigger>
-                <TabsTrigger value="inquiries" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
-                  Inquiries ({inquiries ? inquiries.length : 0})
-                </TabsTrigger>
-                <TabsTrigger value="settings" className="rounded-xl px-8 h-full font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap">
-                  Platform Settings
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="caregivers">
-                <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
-                  <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <CardTitle className="text-2xl font-bold tracking-tight">Caregiver Verification Queue</CardTitle>
-                      <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Review background checks and approve expert network access</CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="w-full overflow-x-auto">
-                      <Table className="min-w-[650px]">
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
-                            <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Specialty</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Rate / Hr</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
-                            <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {caregivers.map((cg, i) => (
-                            <TableRow key={cg._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
-                              <TableCell className="pl-8 py-4">
-                                <div className="flex items-center space-x-4">
-                                  <Avatar className="h-12 w-12 border-2 border-white shadow-md rounded-2xl overflow-hidden">
-                                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${cg.name}`} />
-                                    <AvatarFallback>{cg.name[0]}</AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <span className="font-bold text-slate-900 text-sm block">{cg.name}</span>
-                                    <span className="text-[11px] font-medium text-slate-400">{cg.title}</span>
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-bold text-slate-700 text-xs max-w-[180px] truncate">{cg.specialties?.join(', ') || 'Elderly Care'}</TableCell>
-                              <TableCell className="font-bold text-slate-900 text-sm">${cg.hourlyRate || 45}</TableCell>
-                            <TableCell>
-                              <Badge className={`rounded-full px-4 py-1.5 border-none font-black text-[9px] uppercase tracking-widest ${
-                                cg.isVerified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700 animate-pulse'
-                              }`}>
-                                {cg.isVerified ? 'VERIFIED' : 'PENDING REVIEW'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="pr-8 text-right">
-                              <div className="flex justify-end space-x-2">
-                                {!cg.isVerified && (
-                                  <Button 
-                                    variant="ghost" 
-                                    className="h-10 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
-                                    onClick={() => handleApproveVerification(cg._id)}
-                                    disabled={loading}
-                                  >
-                                    <ShieldCheck size={16} /> APPROVE
-                                  </Button>
-                                )}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl">
-                                      <MoreVertical size={18} />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="bg-white border border-slate-100 p-2 rounded-2xl shadow-xl w-56 z-50">
-                                    <DropdownMenuItem onClick={() => setSelectedCaregiverForDetails(cg)} className="hover:bg-slate-50 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
-                                      <Eye size={14} className="text-slate-400" /> View Details
-                                    </DropdownMenuItem>
-                                    {cg.isVerified ? (
-                                      <DropdownMenuItem onClick={() => handleRevokeVerification(cg._id)} className="hover:bg-slate-50 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600">
-                                        <UserX size={14} className="text-amber-500" /> Revoke Approval
-                                      </DropdownMenuItem>
-                                    ) : (
-                                      <DropdownMenuItem onClick={() => handleApproveVerification(cg._id)} className="hover:bg-slate-50 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600">
-                                        <ShieldCheck size={14} className="text-emerald-500" /> Approve Caregiver
-                                      </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuItem onClick={() => handleToggleAvailability(cg._id, cg.availability)} className="hover:bg-slate-50 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-600">
-                                      {cg.availability ? (
-                                        <>
-                                          <ToggleRight size={14} className="text-blue-500" /> Set Unavailable
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ToggleLeft size={14} className="text-slate-400" /> Set Available
-                                        </>
-                                      )}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator className="my-1 border-slate-100" />
-                                    <DropdownMenuItem onClick={() => handleDeleteCaregiver(cg._id, cg.name)} className="hover:bg-red-50 focus:bg-red-50 text-red-600 cursor-pointer p-2.5 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
-                                      <Trash2 size={14} className="text-red-500" /> Delete Profile
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="services">
-                <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
-                  <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <CardTitle className="text-2xl font-bold tracking-tight">Active Care Services</CardTitle>
-                      <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Configure service catalog and hourly rate baselines</CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="w-full overflow-x-auto">
-                      <Table className="min-w-[650px]">
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
-                            <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Title</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Description</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Price Range</TableHead>
-                            <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {services.map((srv, i) => (
-                          <TableRow key={srv._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
-                            <TableCell className="pl-8 py-4 font-bold text-slate-900 text-sm">
-                              {srv.title}
-                            </TableCell>
-                            <TableCell className="font-medium text-slate-500 text-xs truncate max-w-[250px]">
-                              {srv.description}
-                            </TableCell>
-                            <TableCell className="font-bold text-slate-900 text-sm">
-                              {srv.priceRange}
-                            </TableCell>
-                            <TableCell className="pr-8 text-right">
-                              <div className="flex justify-end space-x-2">
-                                <Button 
-                                  variant="ghost" 
-                                  className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
-                                  onClick={() => handleOpenEditService(srv)}
-                                >
-                                  <Edit2 size={16} /> EDIT
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="complaints">
-                <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
-                  <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <CardTitle className="text-2xl font-bold tracking-tight">Complaints & Disputes</CardTitle>
-                      <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Review customer issues, resolve complaints, and handle escalations</CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="w-full overflow-x-auto">
-                      <Table className="min-w-[650px]">
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
-                            <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver / Service</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Issue Subject</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
-                            <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {complaints && complaints.length > 0 ? (
-                            complaints.map((c: any, i: number) => (
-                              <TableRow key={c._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
-                                <TableCell className="pl-8 py-4">
-                                  <div className="flex items-center space-x-3">
-                                    <Avatar className="h-10 w-10 border shadow-md rounded-xl">
-                                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${c.patient?.name}`} />
-                                      <AvatarFallback>{c.patient?.name?.[0]}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                      <span className="font-bold text-slate-900 text-sm block">{c.patient?.name}</span>
-                                      <span className="text-[10px] font-bold text-slate-400 uppercase">Age: {c.patient?.age || 'N/A'}</span>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <span className="font-bold text-slate-800 text-sm block">{c.caregiver?.name || 'Unassigned'}</span>
-                                  <span className="text-[10px] font-bold text-slate-400 uppercase">{c.booking?.service?.title || 'Care Modality'}</span>
-                                </TableCell>
-                                <TableCell className="font-medium text-slate-900 text-xs max-w-[200px] truncate">
-                                  <div className="font-bold text-slate-900 mb-0.5">{c.title}</div>
-                                  <div className="text-slate-500 text-[10px] font-medium truncate">{c.description}</div>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
-                                    c.status === 'resolved' ? 'bg-emerald-100 text-emerald-700' :
-                                    c.status === 'escalated' ? 'bg-rose-100 text-rose-700 animate-pulse' :
-                                    'bg-amber-100 text-amber-700'
-                                  }`}>
-                                    {c.status}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="pr-8 text-right">
-                                  <Button 
-                                    variant="ghost" 
-                                    className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2"
-                                    onClick={() => {
-                                      setSelectedComplaint(c);
-                                      setResolutionText(c.resolution || '');
-                                    }}
-                                  >
-                                    <Edit2 size={14} /> REVIEW
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
-                                No complaints or support tickets logged in system.
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Reviews Tab */}
-              <TabsContent value="reviews">
-                <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
-                  <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <CardTitle className="text-2xl font-bold tracking-tight">Patient Reviews</CardTitle>
-                      <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Monitor and moderate patient feedback</CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="w-full overflow-x-auto">
-                      <Table className="min-w-[650px]">
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
-                            <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient Name</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Rating</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Comment</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Date</TableHead>
-                            <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {reviews.map((r) => (
-                            <TableRow key={r._id} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
-                              <TableCell className="pl-8 font-bold text-slate-900 text-sm">{r.patientName}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1 text-amber-500">
-                                  {Array.from({ length: r.rating }).map((_, i) => (
-                                    <Star key={i} size={14} className="fill-amber-500" />
-                                  ))}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-xs text-slate-600 max-w-[200px] truncate">{r.comment}</TableCell>
-                              <TableCell className="text-xs font-medium text-slate-500">{new Date(r.createdAt).toLocaleDateString()}</TableCell>
-                              <TableCell className="pr-8 text-right">
-                                <div className="flex justify-end space-x-2">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => handleToggleReviewVisibility(r._id)}
-                                    className={`h-8 px-3 rounded-lg font-bold text-[10px] uppercase tracking-widest flex items-center gap-1 ${
-                                      r.isVisible ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
-                                    }`}
-                                  >
-                                    {r.isVisible ? <Eye size={14} /> : <Eye size={14} className="opacity-50" />}
-                                    {r.isVisible ? 'Hide' : 'Unhide'}
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => handleDeleteReview(r._id)}
-                                    className="h-8 px-3 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-bold text-[10px] uppercase tracking-widest flex items-center gap-1"
-                                  >
-                                    <Trash2 size={14} /> Delete
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          {reviews.length === 0 && (
-                            <TableRow>
-                              <TableCell colSpan={5} className="h-24 text-center text-slate-500 font-medium">No reviews found.</TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="inquiries">
-                <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
-                  <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                       <CardTitle className="text-2xl font-bold tracking-tight">User FAQ & Support Inquiries</CardTitle>
-                       <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Review questions asked by guests and patients and post answers</CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="w-full overflow-x-auto">
-                      <Table className="min-w-[650px]">
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
-                            <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">User / Email</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Question</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Answer</TableHead>
-                            <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
-                            <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {inquiries && inquiries.length > 0 ? (
-                            inquiries.map((inq: any, i: number) => (
-                              <TableRow key={inq._id || i} className="border-slate-100 hover:bg-slate-50/80 transition-colors">
-                                <TableCell className="pl-8 py-4">
-                                  {inq.user ? (
-                                    <div>
-                                      <span className="font-bold text-slate-900 text-sm block">{inq.user.name}</span>
-                                      <span className="text-[10px] font-bold text-slate-400 uppercase">Registered User</span>
-                                    </div>
-                                  ) : (
-                                    <div>
-                                      <span className="font-bold text-slate-900 text-sm block">{inq.email}</span>
-                                      <span className="text-[10px] font-bold text-slate-400 uppercase">Guest</span>
-                                    </div>
-                                  )}
-                                </TableCell>
-                                <TableCell className="font-medium text-slate-900 text-xs max-w-[200px] truncate">
-                                  {inq.question}
-                                </TableCell>
-                                <TableCell className="text-xs text-slate-600 max-w-[200px] truncate">
-                                  {inq.answer || <span className="italic text-slate-400">Not answered yet</span>}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
-                                    inq.status === 'answered' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700 animate-pulse'
-                                  }`}>
-                                    {inq.status}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="pr-8 text-right">
-                                  {answeringInquiryId === inq._id ? (
-                                    <div className="flex flex-col gap-2 items-end">
-                                      <Input 
-                                        value={answerText}
-                                        onChange={(e) => setAnswerText(e.target.value)}
-                                        placeholder="Type answer here..."
-                                        className="h-10 text-xs w-48"
-                                      />
-                                      <div className="flex gap-2">
-                                        <Button 
-                                          size="sm"
-                                          variant="outline"
-                                          className="h-8 rounded-lg text-[10px] font-bold"
-                                          onClick={() => {
-                                            setAnsweringInquiryId(null);
-                                            setAnswerText('');
-                                          }}
-                                        >
-                                          Cancel
-                                        </Button>
-                                        <Button 
-                                          size="sm"
-                                          className="h-8 rounded-lg bg-slate-950 text-white text-[10px] font-bold"
-                                          onClick={() => handleAnswerSubmit(inq._id)}
-                                        >
-                                          Submit
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <Button 
-                                      variant="ghost" 
-                                      className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2"
-                                      onClick={() => {
-                                        setAnsweringInquiryId(inq._id);
-                                        setAnswerText(inq.answer || '');
-                                      }}
-                                    >
-                                      <Edit2 size={14} /> ANSWER
-                                    </Button>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
-                                No support inquiries logged in the system.
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="settings">
-                <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
-                  <CardHeader className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <CardTitle className="text-2xl font-bold tracking-tight">Platform Configuration</CardTitle>
-                      <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage global site content, contact info, and social links.</CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-8 max-h-[700px] overflow-y-auto">
-                    <form onSubmit={handleSettingsSubmit} className="space-y-12">
-                      
-                      {/* Section: Homepage Content */}
-                      <div>
-                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Homepage Messaging</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Hero Title</Label>
-                            <Input
-                              placeholder="e.g. Compassionate Care"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.heroTitle}
-                              onChange={e => setSettingsForm({ ...settingsForm, heroTitle: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Hero Subtitle</Label>
-                            <Input
-                              placeholder="e.g. Professional nursing and elderly care"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.heroSubtitle}
-                              onChange={e => setSettingsForm({ ...settingsForm, heroSubtitle: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Primary CTA Button</Label>
-                            <Input
-                              placeholder="e.g. Find a Caregiver"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.heroPrimaryCTA}
-                              onChange={e => setSettingsForm({ ...settingsForm, heroPrimaryCTA: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Secondary CTA Button</Label>
-                            <Input
-                              placeholder="e.g. Our Services"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.heroSecondaryCTA}
-                              onChange={e => setSettingsForm({ ...settingsForm, heroSecondaryCTA: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section: Trust Cards */}
-                      <div>
-                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Trust & Credibility Cards</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 1 Title</Label>
-                            <Input
-                              placeholder="e.g. Patient Satisfaction"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.satisfactionTitle}
-                              onChange={e => setSettingsForm({ ...settingsForm, satisfactionTitle: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 1 Description</Label>
-                            <Input
-                              placeholder="e.g. Verified Family Reviews"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.satisfactionDescription}
-                              onChange={e => setSettingsForm({ ...settingsForm, satisfactionDescription: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 2 Title</Label>
-                            <Input
-                              placeholder="e.g. Verified Caregivers"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.caregiverTrustTitle}
-                              onChange={e => setSettingsForm({ ...settingsForm, caregiverTrustTitle: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 2 Description</Label>
-                            <Input
-                              placeholder="e.g. Background Checked Professionals"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.caregiverTrustDescription}
-                              onChange={e => setSettingsForm({ ...settingsForm, caregiverTrustDescription: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 3 Title</Label>
-                            <Input
-                              placeholder="e.g. Service Coverage"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.serviceCoverageTitle}
-                              onChange={e => setSettingsForm({ ...settingsForm, serviceCoverageTitle: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 3 Description</Label>
-                            <Input
-                              placeholder="e.g. Multi-City Support Network"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.serviceCoverageDescription}
-                              onChange={e => setSettingsForm({ ...settingsForm, serviceCoverageDescription: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section: Company Info */}
-                      <div>
-                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Company Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Company Name</Label>
-                            <Input
-                              placeholder="e.g. Care24"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.companyName}
-                              onChange={e => setSettingsForm({ ...settingsForm, companyName: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Supported Cities (comma-separated)</Label>
-                            <Input
-                              placeholder="e.g. New York, San Francisco, Los Angeles"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.supportedCities}
-                              onChange={e => setSettingsForm({ ...settingsForm, supportedCities: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2 md:col-span-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Footer Description</Label>
-                            <textarea
-                              placeholder="e.g. Empowering families with professional home care..."
-                              rows={2}
-                              className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
-                              value={settingsForm.footerDescription}
-                              onChange={e => setSettingsForm({ ...settingsForm, footerDescription: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section: Support Details */}
-                      <div>
-                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Contact & Support Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Email</Label>
-                            <Input
-                              type="email"
-                              placeholder="e.g. support@care24.com"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.supportEmail}
-                              onChange={e => setSettingsForm({ ...settingsForm, supportEmail: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Emergency / Support Phone</Label>
-                            <Input
-                              placeholder="e.g. +1 (800) 123-4567"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.supportPhone}
-                              onChange={e => setSettingsForm({ ...settingsForm, supportPhone: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">WhatsApp Number</Label>
-                            <Input
-                              placeholder="e.g. +1 555 0123"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.whatsappNumber}
-                              onChange={e => setSettingsForm({ ...settingsForm, whatsappNumber: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Hours</Label>
-                            <Input
-                              placeholder="e.g. 24/7 Available"
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.supportHours}
-                              onChange={e => setSettingsForm({ ...settingsForm, supportHours: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2 md:col-span-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Office Address</Label>
-                            <textarea
-                              placeholder="e.g. 100 Main Street, Suite 500, New York, NY"
-                              rows={2}
-                              className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
-                              value={settingsForm.officeAddress}
-                              onChange={e => setSettingsForm({ ...settingsForm, officeAddress: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section: Social Links */}
-                      <div>
-                        <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Social Links</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Facebook URL</Label>
-                            <Input
-                              placeholder="https://facebook.com/..."
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.facebookUrl}
-                              onChange={e => setSettingsForm({ ...settingsForm, facebookUrl: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Instagram URL</Label>
-                            <Input
-                              placeholder="https://instagram.com/..."
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.instagramUrl}
-                              onChange={e => setSettingsForm({ ...settingsForm, instagramUrl: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">LinkedIn URL</Label>
-                            <Input
-                              placeholder="https://linkedin.com/in/..."
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.linkedinUrl}
-                              onChange={e => setSettingsForm({ ...settingsForm, linkedinUrl: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Twitter (X) URL</Label>
-                            <Input
-                              placeholder="https://twitter.com/..."
-                              className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                              value={settingsForm.twitterUrl}
-                              onChange={e => setSettingsForm({ ...settingsForm, twitterUrl: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end pt-4 sticky bottom-0 bg-white p-4 border-t border-slate-100 z-10 rounded-b-2xl -mx-8 -mb-8">
-                        <Button
-                          type="submit"
-                          className="w-full md:w-auto h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] px-10 shadow-xl active:scale-95 transition-all"
-                          disabled={loading}
-                        >
-                          {loading ? <Loader2 className="animate-spin" size={20} /> : 'SAVE PLATFORM SETTINGS'}
-                        </Button>
-                      </div>
-                    </form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+        {/* Booking Activity Overview + Daily Bookings and Tab Tables */}
+        <Tabs defaultValue="overview" className="space-y-8">
+          {/* Primary single-row navigation tabs list */}
+          <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm max-w-4xl w-full">
+            <TabsList className="bg-transparent p-0 h-auto w-full grid grid-cols-5 gap-1">
+              <TabsTrigger value="overview" className="rounded-xl px-2 h-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap w-full">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="caregivers" className="rounded-xl px-2 h-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap w-full">
+                Caregivers ({caregivers.length})
+              </TabsTrigger>
+              <TabsTrigger value="users" className="rounded-xl px-2 h-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap w-full">
+                Users ({adminUsers.length})
+              </TabsTrigger>
+              <TabsTrigger value="bookings" className="rounded-xl px-2 h-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap w-full">
+                Bookings ({bookings.length})
+              </TabsTrigger>
+              <TabsTrigger value="complaints" className="rounded-xl px-2 h-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap w-full">
+                Complaints ({complaints?.length || 0})
+              </TabsTrigger>
+            </TabsList>
           </div>
 
-          <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
-            <CardHeader className="p-8 border-b border-slate-100 pb-6">
-              <CardTitle className="text-2xl font-bold tracking-tight">System Alerts</CardTitle>
-              <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Live infrastructure event log</CardDescription>
-            </CardHeader>
-            <CardContent className="p-8 space-y-6">
-              {[
-                { title: 'Caregiver Verification sync', time: 'Just now', type: 'info' },
-                { title: 'Critical Server Load Normal', time: '5m ago', type: 'info' },
-                { title: 'Payment Gateway sync active', time: '12m ago', type: 'info' },
-                { title: 'New support ticket #4521', time: '2h ago', type: 'warning' },
-              ].map((alert, i) => (
-                <div key={i} className="flex items-start space-x-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-slate-200 transition-colors">
-                  <div className={`mt-0.5 p-2 rounded-xl shadow-sm ${
-                    alert.type === 'critical' ? 'bg-red-50 text-red-600 border border-red-100' :
-                    alert.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                    'bg-blue-50 text-blue-600 border border-blue-100'
-                  }`}>
-                    <AlertCircle size={18} />
+          {/* Overview Tab Content */}
+          <TabsContent value="overview" className="space-y-8 outline-none">
+            {/* Platform Activity Overview Card */}
+            <Card className="rounded-[32px] border-none shadow-sm overflow-hidden bg-white">
+              <CardHeader className="p-8 pb-4">
+                <CardTitle className="text-2xl font-bold tracking-tight">Platform Activity Overview</CardTitle>
+                <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Platform engagement and operation counts</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8 pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
+                  <div className="p-6 rounded-2xl bg-indigo-50 border border-indigo-100">
+                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Total Bookings</p>
+                    <p className="text-3xl font-black text-indigo-700">{bookings.length}</p>
+                    <p className="text-[9px] font-bold text-indigo-500 mt-1">All-time bookings</p>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-sm tracking-tight">{alert.title}</h4>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">{alert.time}</p>
+                  <div className="p-6 rounded-2xl bg-blue-50 border border-blue-100">
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Active Bookings</p>
+                    <p className="text-3xl font-black text-blue-700">{bookings.filter(b => b.status === 'active' || b.status === 'confirmed').length}</p>
+                    <p className="text-[9px] font-bold text-blue-500 mt-1">In progress & active</p>
+                  </div>
+                  <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-100">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Completed Bookings</p>
+                    <p className="text-3xl font-black text-emerald-700">{bookings.filter(b => b.status === 'completed').length}</p>
+                    <p className="text-[9px] font-bold text-emerald-500 mt-1">Successfully delivered</p>
+                  </div>
+                  <div className="p-6 rounded-2xl bg-amber-50 border border-amber-100">
+                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Pending Requests</p>
+                    <p className="text-3xl font-black text-amber-700">{bookings.filter(b => b.status === 'pending').length}</p>
+                    <p className="text-[9px] font-bold text-amber-500 mt-1">Awaiting caregiver</p>
+                  </div>
+                  <div className="p-6 rounded-2xl bg-violet-50 border border-violet-100">
+                    <p className="text-[10px] font-black text-violet-600 uppercase tracking-widest mb-1">Monthly Active Users</p>
+                    <p className="text-3xl font-black text-violet-700">{adminMetrics?.monthlyActiveUsers || Math.max(15, Math.floor(adminUsers.length * 0.8))}</p>
+                    <p className="text-[9px] font-bold text-violet-500 mt-1">Clients & caregivers</p>
                   </div>
                 </div>
-              ))}
-              <Button variant="outline" className="w-full h-14 rounded-2xl mt-6 bg-slate-50 border-slate-200 font-bold text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-100">
-                VIEW ALL EVENTS <ArrowUpRight size={16} className="ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+
+            {/* Verification Queue & Alerts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-8">
+                {/* Daily Bookings Chart */}
+                {renderDailyBookingsChartCard()}
+                
+                {/* Caregiver Verification Queue (unverified only) */}
+                {renderCaregiversTable(true)}
+              </div>
+              <div className="lg:col-span-1">
+                {/* Recent Operational Alerts */}
+                {renderAlertsSidebar()}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Caregivers Full List Content */}
+          <TabsContent value="caregivers" className="outline-none">
+            {renderCaregiversTable(false)}
+          </TabsContent>
+
+          {/* Users List Content */}
+          <TabsContent value="users" className="outline-none">
+            {renderUsersTable()}
+          </TabsContent>
+
+          {/* Bookings List Content */}
+          <TabsContent value="bookings" className="outline-none">
+            {renderBookingsTable()}
+          </TabsContent>
+
+          {/* Complaints Content */}
+          <TabsContent value="complaints" className="outline-none">
+            {renderComplaintsTable()}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Service Modal */}
       {isServiceModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <Card className="max-w-lg w-full rounded-[40px] shadow-2xl p-8 bg-white border border-slate-100 relative">
             <button 
               onClick={() => setIsServiceModalOpen(false)} 
@@ -1226,21 +1666,26 @@ export function AdminDashboard() {
                 <FileText size={24} />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{editingService ? 'Edit Service Modality' : 'Add Service Modality'}</h3>
-                <p className="text-xs text-slate-400 font-medium mt-1">Configure service baselines and baseline rates in MongoDB Atlas.</p>
+                <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{editingService ? 'Edit Service Category' : 'Add Service Category'}</h3>
+                <p className="text-xs text-slate-400 font-medium mt-1">Configure service details and baseline rates for the platform.</p>
               </div>
             </div>
 
             <form onSubmit={handleServiceSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="srvTitle" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Service Title *</Label>
-                <Input
+                <Label htmlFor="srvTitle" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Service Category *</Label>
+                <select
                   id="srvTitle"
-                  placeholder="e.g. Nursing Care, Physiotherapy"
-                  className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                  className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none px-3"
                   value={serviceForm.title}
                   onChange={e => setServiceForm({ ...serviceForm, title: e.target.value })}
-                />
+                >
+                  <option value="">Select Service Category</option>
+                  <option value="Nursing Care">Nursing Care</option>
+                  <option value="Elderly Attendant">Elderly Attendant</option>
+                  <option value="Physiotherapy">Physiotherapy</option>
+                  <option value="Post-Hospital Care">Post-Hospital Care</option>
+                </select>
               </div>
 
               <div className="space-y-2">
@@ -1260,24 +1705,26 @@ export function AdminDashboard() {
                   <Label htmlFor="srvPrice" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Price Range *</Label>
                   <Input
                     id="srvPrice"
-                    placeholder="e.g. From $45/hr, From $50/visit"
+                    placeholder="e.g. Standard Rates"
                     className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
                     value={serviceForm.priceRange}
                     onChange={e => setServiceForm({ ...serviceForm, priceRange: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="srvIcon" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Icon MODALITY</Label>
+                  <Label htmlFor="srvIcon" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Service Icon</Label>
                   <select
                     id="srvIcon"
                     className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none px-3"
                     value={serviceForm.icon}
                     onChange={e => setServiceForm({ ...serviceForm, icon: e.target.value })}
                   >
-                    <option value="Stethoscope">Stethoscope</option>
+                    <option value="Heart">Heart</option>
                     <option value="Activity">Activity</option>
                     <option value="UserPlus">UserPlus</option>
-                    <option value="Brain">Brain</option>
+                    <option value="Home">Home</option>
+                    <option value="Users">Users</option>
+                    <option value="Calendar">Calendar</option>
                   </select>
                 </div>
               </div>
@@ -1293,12 +1740,25 @@ export function AdminDashboard() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="srvStatus" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Status</Label>
+                <select
+                  id="srvStatus"
+                  className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none px-3"
+                  value={serviceForm.isActive ? "true" : "false"}
+                  onChange={e => setServiceForm({ ...serviceForm, isActive: e.target.value === "true" })}
+                >
+                  <option value="true">Active (Visible to Users)</option>
+                  <option value="false">Disabled (Hidden from Users)</option>
+                </select>
+              </div>
+
               <Button
                 type="submit"
                 className="w-full h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all"
                 disabled={loading}
               >
-                {loading ? <Loader2 className="animate-spin" size={20} /> : (editingService ? 'UPDATE MODALITY' : 'CREATE MODALITY')}
+                {loading ? <Loader2 className="animate-spin" size={20} /> : (editingService ? 'UPDATE SERVICE' : 'CREATE SERVICE')}
               </Button>
             </form>
           </Card>
@@ -1307,7 +1767,7 @@ export function AdminDashboard() {
 
       {/* Caregiver Details Modal */}
       {selectedCaregiverForDetails && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <Card className="max-w-xl w-full rounded-[40px] shadow-2xl p-8 bg-white border border-slate-100 relative">
             <button 
               onClick={() => setSelectedCaregiverForDetails(null)} 
@@ -1334,7 +1794,7 @@ export function AdminDashboard() {
                 <Badge className={`rounded-full px-4 py-1.5 border-none font-black text-[9px] uppercase tracking-widest ${
                   selectedCaregiverForDetails.availability ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
                 }`}>
-                  {selectedCaregiverForDetails.availability ? 'ACTIVE SHIFT' : 'UNAVAILABLE'}
+                  {selectedCaregiverForDetails.availability ? 'AVAILABLE' : 'UNAVAILABLE'}
                 </Badge>
               </div>
             </div>
@@ -1358,17 +1818,22 @@ export function AdminDashboard() {
               <div>
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2">Specialties</h4>
                 <div className="flex flex-wrap gap-1.5">
-                  {selectedCaregiverForDetails.specialties?.length ? (
-                    selectedCaregiverForDetails.specialties.map((spec: string, index: number) => (
-                      <Badge key={index} variant="secondary" className="rounded-xl px-3 py-1 font-bold text-[10px] text-slate-700 bg-slate-100 border-none uppercase tracking-wide">
-                        {spec}
+                  {(() => {
+                    const filteredSpecs = selectedCaregiverForDetails.specialties?.filter((spec: string) =>
+                      allowedSpecialties.some(allowed => spec.toLowerCase().includes(allowed))
+                    ) || [];
+                    return filteredSpecs.length ? (
+                      filteredSpecs.map((spec: string, index: number) => (
+                        <Badge key={index} variant="secondary" className="rounded-xl px-3 py-1 font-bold text-[10px] text-slate-700 bg-slate-100 border-none uppercase tracking-wide">
+                          {spec}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge variant="secondary" className="rounded-xl px-3 py-1 font-bold text-[10px] text-slate-700 bg-slate-100 border-none uppercase tracking-wide">
+                        Caregiver
                       </Badge>
-                    ))
-                  ) : (
-                    <Badge variant="secondary" className="rounded-xl px-3 py-1 font-bold text-[10px] text-slate-700 bg-slate-100 border-none uppercase tracking-wide">
-                      Elderly Care
-                    </Badge>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -1418,7 +1883,7 @@ export function AdminDashboard() {
 
       {/* Complaint Resolution Modal */}
       {selectedComplaint && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <Card className="max-w-lg w-full rounded-[40px] shadow-2xl p-8 bg-white border border-slate-100 relative">
             <button 
               onClick={() => setSelectedComplaint(null)} 
@@ -1432,8 +1897,8 @@ export function AdminDashboard() {
                 <AlertCircle size={24} />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Resolve Complaint Ticket</h3>
-                <p className="text-xs text-slate-400 font-medium mt-1">Review ticket, enter resolution notes, and resolve/escalate.</p>
+                <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Resolve Complaint/Dispute</h3>
+                <p className="text-xs text-slate-400 font-medium mt-1">Review complaint details, enter resolution notes, and resolve/escalate.</p>
               </div>
             </div>
 
@@ -1462,7 +1927,7 @@ export function AdminDashboard() {
               <Label htmlFor="resolution" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Resolution Notes *</Label>
               <textarea
                 id="resolution"
-                placeholder="Enter final ticket resolution or escalation details..."
+                placeholder="Enter final resolution or escalation details..."
                 rows={3}
                 className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
                 value={resolutionText}
@@ -1476,17 +1941,154 @@ export function AdminDashboard() {
                 onClick={() => handleResolveComplaint('resolved')}
                 disabled={loading}
               >
-                Resolve Ticket
+                Mark Resolved
               </Button>
               <Button 
                 className="flex-1 h-14 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-widest active:scale-95 transition-all"
                 onClick={() => handleResolveComplaint('escalated')}
                 disabled={loading}
               >
-                Escalate Ticket
+                Escalate Dispute
               </Button>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Admin Panel / Management Center slide-over drawer */}
+      {isAdminPanelOpen && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex justify-end transition-opacity duration-300">
+          <div className="w-full max-w-[1100px] h-full bg-slate-50 shadow-2xl flex flex-row overflow-hidden animate-slide-in-right relative">
+            
+            {/* Left Navigation Sidebar */}
+            <div className="w-64 md:w-80 bg-white border-r border-slate-100 flex flex-col h-full shrink-0">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">Management Center</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Secondary Modules</p>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {[
+                  {
+                    title: 'Platform Operations',
+                    items: [
+                      { label: 'Services', value: 'services', icon: Activity },
+                    ]
+                  },
+                  {
+                    title: 'Quality Control',
+                    items: [
+                      { label: 'Care Notes', value: 'carenotes', icon: FileText },
+                      { label: 'Reviews', value: 'reviews', icon: Star },
+                      { label: 'Complaints', value: 'complaints', icon: AlertCircle },
+                    ]
+                  },
+                  {
+                    title: 'Support & Resolution',
+                    items: [
+                      { label: 'Inquiries', value: 'inquiries', icon: Search },
+                      { label: 'Escalations', value: 'escalations', icon: TrendingUp },
+                    ]
+                  },
+                  {
+                    title: 'System Configuration',
+                    items: [
+                      { label: 'Settings', value: 'settings', icon: Settings },
+                      { label: 'Support Information', value: 'support_info', icon: Clock },
+                    ]
+                  }
+                ].map((section, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3">
+                      {section.title}
+                    </h3>
+                    <div className="space-y-1">
+                      {section.items.map((item) => {
+                        const isActive = activeAdminPanelTab === item.value;
+                        const IconComponent = item.icon;
+                        return (
+                          <button
+                            key={item.value}
+                            onClick={() => setActiveAdminPanelTab(item.value)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-left ${
+                              isActive 
+                                ? 'bg-slate-900 text-white shadow-md' 
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                          >
+                            <IconComponent size={16} />
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 border-t border-slate-100">
+                <Button 
+                  variant="outline" 
+                  className="w-full h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-rose-600 border-rose-100 bg-rose-50/50 hover:bg-rose-50"
+                  onClick={() => setIsAdminPanelOpen(false)}
+                >
+                  Close Workspace
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Content Workspace */}
+            <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
+              <div className="p-6 bg-white border-b border-slate-100 flex justify-between items-center z-10 shadow-sm shrink-0">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">
+                    {activeAdminPanelTab === 'support_info' ? 'Support Information' : activeAdminPanelTab}
+                  </h2>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                    {activeAdminPanelTab === 'services' && 'Configure and manage care services.'}
+                    {activeAdminPanelTab === 'carenotes' && 'Monitor visits and wellness logs.'}
+                    {activeAdminPanelTab === 'reviews' && 'Moderate customer review details.'}
+                    {activeAdminPanelTab === 'complaints' && 'Resolve general complaints and disputes.'}
+                    {activeAdminPanelTab === 'inquiries' && 'Reply to FAQs and customer questions.'}
+                    {activeAdminPanelTab === 'escalations' && 'Handle critical dispute resolutions.'}
+                    {activeAdminPanelTab === 'settings' && 'Customize global landing page settings.'}
+                    {activeAdminPanelTab === 'support_info' && 'Update support hotline, emails, and address.'}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setIsAdminPanelOpen(false)}
+                  className="w-10 h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors border border-slate-100"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-8">
+                {(() => {
+                  switch (activeAdminPanelTab) {
+                    case 'services':
+                      return renderServicesContent();
+                    case 'carenotes':
+                      return renderCareNotesContent();
+                    case 'reviews':
+                      return renderReviewsContent();
+                    case 'complaints':
+                      return renderComplaintsTable();
+                    case 'inquiries':
+                      return renderInquiriesContent();
+                    case 'escalations':
+                      return renderEscalationsContent();
+                    case 'settings':
+                      return renderSettingsContent();
+                    case 'support_info':
+                      return renderSupportInfoContent();
+                    default:
+                      return renderServicesContent();
+                  }
+                })()}
+              </div>
+            </div>
+
+          </div>
         </div>
       )}
     </div>

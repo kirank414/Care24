@@ -22,7 +22,7 @@ router.get("/", async (req, res) => {
 // @desc    Update system settings
 // @route   PUT /api/settings
 // @access  Private/Admin
-router.put("/", protect, authorize("ADMIN"), async (req, res) => {
+router.put("/", protect, authorize("admin"), async (req, res) => {
   try {
     const updates = req.body;
     let settings = await SystemSetting.findOne({ key: "global" });

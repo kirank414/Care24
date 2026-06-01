@@ -2,7 +2,7 @@ import { Service } from './types';
 import nursingCareImg from './assets/nursing-care.png';
 import physiotherapyImg from './assets/physiotherapy.jpg';
 import elderlyAttendantImg from './assets/elderly-attendant.jpg';
-import dementiaCareImg from './assets/dementia-care.jpg';
+
 
 export const SERVICES: Service[] = [
   {
@@ -37,13 +37,13 @@ export const SERVICES: Service[] = [
   },
   {
     id: '4',
-    title: 'Dementia Care',
-    description: 'Compassionate, specialized care for patients with Alzheimer’s or dementia.',
+    title: 'Post-Hospital Care',
+    description: 'Professional recovery assistance after discharge, helping patients transition safely from hospital to home.',
     startingPrice: 40,
-    icon: 'Brain',
-    image: dementiaCareImg,
-    category: 'DEMENTIA',
-    duration: 'Long-term'
+    icon: 'Activity',
+    image: nursingCareImg,
+    category: 'POST_OP',
+    duration: 'Short/Long-term'
   }
 ];
 

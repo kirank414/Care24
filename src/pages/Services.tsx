@@ -21,7 +21,7 @@ import { useCareStore } from '../stores/careStore';
 import nursingCareImg from '../assets/nursing-care.png';
 import physiotherapyImg from '../assets/physiotherapy.jpg';
 import elderlyAttendantImg from '../assets/elderly-attendant.jpg';
-import dementiaCareImg from '../assets/dementia-care.jpg';
+import postHospitalCareImg from '../assets/post-hospital-care.jpg';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 
@@ -29,8 +29,60 @@ const serviceImages: Record<string, string> = {
   'Nursing Care': nursingCareImg,
   'Physiotherapy': physiotherapyImg,
   'Elderly Attendant': elderlyAttendantImg,
-  'Dementia Care': dementiaCareImg,
+  'Post-Hospital Care': postHospitalCareImg,
+  'Post-hospital Care': postHospitalCareImg,
 };
+
+const serviceDetailsMapping: Record<string, {
+  suitableFor: string;
+  careLevel: string;
+  duration: string;
+  qualification: string;
+  availability: string;
+}> = {
+  'nursing care': {
+    suitableFor: 'Post-treatment recovery and ongoing care',
+    careLevel: 'Advanced',
+    duration: 'Hourly / Daily',
+    qualification: 'Verified Nurse',
+    availability: 'Available'
+  },
+  'elderly attendant': {
+    suitableFor: 'Daily living assistance and companionship',
+    careLevel: 'Basic to Moderate',
+    duration: 'Hourly / Daily / Long-Term',
+    qualification: 'Verified Attendant',
+    availability: 'Available'
+  },
+  'physiotherapy': {
+    suitableFor: 'Mobility and rehabilitation support',
+    careLevel: 'Specialized',
+    duration: 'Session Based',
+    qualification: 'Licensed Physiotherapist',
+    availability: 'Available'
+  },
+  'post-hospital care': {
+    suitableFor: 'Recovery assistance after discharge',
+    careLevel: 'Moderate to Advanced',
+    duration: 'Short-Term / Long-Term',
+    qualification: 'Verified Healthcare Professional',
+    availability: 'Available'
+  }
+};
+
+function getServiceDetails(title: string) {
+  const normalized = title.trim().toLowerCase();
+  if (serviceDetailsMapping[normalized]) {
+    return serviceDetailsMapping[normalized];
+  }
+  return {
+    suitableFor: 'General home care support',
+    careLevel: 'Moderate',
+    duration: 'Hourly / Daily / Long-Term',
+    qualification: 'Verified Healthcare Professional',
+    availability: 'Available'
+  };
+}
 
 export function ServicesPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -125,7 +177,8 @@ export function ServicesPage() {
                   </div>
                 ))
               ) : (() => {
-                  const displayServices = services && services.length > 0 ? services : FIXED_SERVICES;
+                  const displayServices = (services && services.length > 0 ? services : FIXED_SERVICES)
+                    .filter((service: any) => service.isActive !== false);
                   const filteredServices = displayServices.filter((service: any) => 
                     service.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                     service.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -167,30 +220,54 @@ export function ServicesPage() {
                             <div className="w-12 h-12 bg-blue-50 text-primary rounded-xl flex items-center justify-center">
                               <Icon size={24} />
                             </div>
+                            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 font-black text-[9px] uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
+                              {getServiceDetails(service.title).availability}
+                            </Badge>
                           </div>
                           
                           <h3 className="text-xl font-bold text-slate-950 mb-2 tracking-tight">
                             {service.title}
                           </h3>
                           
-                          <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
+                          <p className="text-sm text-slate-500 font-medium mb-4 leading-relaxed">
                             {service.description}
                           </p>
+
+                          {/* PRD Specified Attributes */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 bg-slate-50 p-4 rounded-2xl text-[10px] font-semibold text-slate-700">
+                            <div>
+                              <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Suitable For</span>
+                              <span className="text-slate-800 font-bold">{getServiceDetails(service.title).suitableFor}</span>
+                            </div>
+                            <div>
+                              <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Care Level</span>
+                              <span className="text-slate-800 font-bold">{getServiceDetails(service.title).careLevel}</span>
+                            </div>
+                            <div>
+                              <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Typical Duration</span>
+                              <span className="text-slate-800 font-bold">{getServiceDetails(service.title).duration}</span>
+                            </div>
+                            <div>
+                              <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Required Qualification</span>
+                              <span className="text-slate-800 font-bold">{getServiceDetails(service.title).qualification}</span>
+                            </div>
+                          </div>
                           
-                          <div className="space-y-3 mb-6 flex-grow">
+                          <div className="space-y-2 mb-6 flex-grow">
+                            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Key Features</span>
                             {service.features?.map((f: string, iKey: number) => (
                               <div key={iKey} className="flex items-center gap-3">
-                                <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
                                 <p className="text-xs font-bold text-slate-700">{f}</p>
                               </div>
                             )) || (
                               <>
                                 <div className="flex items-center gap-3">
-                                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                                  <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
                                   <p className="text-xs font-bold text-slate-700">Compassionate Support</p>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                                  <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
                                   <p className="text-xs font-bold text-slate-700">Verified specialists</p>
                                 </div>
                               </>
@@ -199,8 +276,8 @@ export function ServicesPage() {
                           
                           <div className="pt-4 border-t border-slate-50 flex items-center justify-between mt-auto">
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Price baseline</p>
-                              <p className="text-lg font-black text-slate-950">{service.priceRange}</p>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Care Consultation</span>
+                              <p className="text-xs font-black text-slate-950 uppercase tracking-wide mt-0.5">Tailored Matching</p>
                             </div>
                             <Link 
                               to={`/caregivers?category=${service.title}`} 
@@ -274,12 +351,14 @@ export function ServicesPage() {
       <section className="py-24 scroll-mt-12 flex flex-col justify-center items-center bg-white overflow-hidden rounded-[48px] mx-4 sm:mx-8 shadow-xl mb-12">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-           <Badge className="bg-primary/5 text-primary border-primary/20 px-4 py-2 mb-4 text-[10px] font-black uppercase tracking-[0.2em] rounded-full">Next Steps</Badge>
-           <h2 className="text-4xl lg:text-5xl font-bold text-slate-950 tracking-[-0.06em] mb-4 italic">Compassionate care. <br /><span className="text-slate-300 not-italic">Starting today.</span></h2>
-           <p className="text-xl text-slate-500 mb-8 max-w-3xl mx-auto font-medium leading-relaxed">Whether you need a dedicated attendant for tonight or a caring physical therapist for a 6-month recovery, we are here for you.</p>
+           <Badge className="bg-primary/5 text-primary border-primary/20 px-4 py-2 mb-4 text-[10px] font-black uppercase tracking-[0.2em] rounded-full">Consultation</Badge>
+           <h2 className="text-4xl lg:text-5xl font-bold text-slate-950 tracking-[-0.06em] mb-4">Choosing the Right Care Service</h2>
+           <p className="text-xl text-slate-500 mb-8 max-w-3xl mx-auto font-medium leading-relaxed">
+             Our care coordinators help families select the most appropriate service based on care requirements, duration, and caregiver availability.
+           </p>
            <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
               <Button size="lg" className="h-24 px-20 rounded-[32px] bg-slate-950 text-white hover:bg-slate-900 font-black text-xl shadow-4xl shadow-slate-200" render={<Link to="/pricing" />} nativeButton={false}>
-                VIEW SERVICES
+                Request Service Consultation
               </Button>
               <Button size="lg" variant="ghost" className="h-24 px-12 rounded-[32px] font-black text-lg uppercase tracking-widest text-slate-400 hover:text-slate-900" render={<Link to="/contact" />} nativeButton={false}>
                 Contact Support <ArrowRight className="ml-4" />

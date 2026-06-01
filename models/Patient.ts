@@ -73,6 +73,7 @@ const patientSchema = new mongoose.Schema(
       name: { type: String, required: true },
       phone: { type: String, required: true },
       relation: { type: String, required: true },
+      notificationPreference: { type: String, enum: ["SMS", "Email", "Phone Call", "WhatsApp"], default: "SMS" },
     },
   },
   {

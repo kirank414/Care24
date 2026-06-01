@@ -19,8 +19,8 @@ const inquirySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "answered"],
-      default: "pending",
+      enum: ["Open", "In Progress", "Resolved"],
+      default: "Open",
     },
   },
   {

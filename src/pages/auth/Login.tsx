@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/api';
 import { toast } from 'sonner';
+import { normalizeEmail } from '@/src/utils/normalize';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -33,14 +34,14 @@ export function LoginPage() {
     }
   }, [isAuthenticated, role, navigate, location]);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormValues>({
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
       const response = await api.post('/auth/login', {
-        email: data.email,
+        email: data.email.toLowerCase().trim(),
         password: data.password,
       });
 
@@ -107,8 +108,12 @@ export function LoginPage() {
                   <Input 
                     id="email" 
                     placeholder="Enter your email"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
-                    {...register('email')}
+                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    {...register('email', {
+                      onBlur: (e) => {
+                        setValue('email', normalizeEmail(e.target.value));
+                      }
+                    })}
                   />
                 </div>
                 {errors.email && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.email.message}</p>}
@@ -127,7 +132,7 @@ export function LoginPage() {
                     id="password" 
                     type="password" 
                     placeholder="••••••••"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
                     {...register('password')}
                   />
                 </div>

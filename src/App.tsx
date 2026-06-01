@@ -10,13 +10,15 @@ import { ServicesPage } from './pages/Services';
 import { CaregiversPage } from './pages/Caregivers';
 import { PricingPage } from './pages/Pricing';
 import { AboutPage } from './pages/About';
-import { ContactPage } from './pages/Contact';
 import { UserDashboard } from './pages/dashboard/UserDashboard';
 import { CaregiverDashboard } from './pages/dashboard/CaregiverDashboard';
 import { AdminDashboard } from './pages/dashboard/AdminDashboard';
 import { LoginPage } from './pages/auth/Login';
 import { SignupPage } from './pages/auth/Signup';
 import { Badge } from '@/components/ui/badge';
+import { BookCarePage } from './pages/BookCare';
+import { CaregiverProfilePage } from './pages/CaregiverProfile';
+import { FaqPage } from './pages/Faq';
 
 // Placeholder components
 const ComingSoon = ({ title }: { title: string }) => (
@@ -43,11 +45,21 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="services" element={<ServicesPage />} />
           <Route path="caregivers" element={<CaregiversPage />} />
+          <Route path="caregiver/:id" element={<CaregiverProfilePage />} />
+          <Route path="faq" element={<FaqPage />} />
           <Route path="about" element={<AboutPage />} />
           <Route path="pricing" element={<PricingPage />} />
-          <Route path="contact" element={<ContactPage />} />
+          <Route path="contact" element={<Navigate to="/" replace />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="signup" element={<SignupPage />} />
+          <Route 
+            path="book-care" 
+            element={
+              <ProtectedRoute allowedRoles={['USER']}>
+                <BookCarePage />
+              </ProtectedRoute>
+            } 
+          />
           
           {/* Onboarding Profiles */}
           <Route 

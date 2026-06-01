@@ -71,29 +71,17 @@ caregiverSchema.post("findOneAndUpdate", async function () {
   await updateServicePrices();
 });
 
-caregiverSchema.post("findOneAndDelete", async function () {
-  await updateServicePrices();
-});
+// Removed findOneAndDelete post hook - moved to explicit deletion route logic
 
-async function updateServicePrices() {
+export async function updateServicePrices() {
   try {
     const ServiceCategory = mongoose.model("ServiceCategory");
-    const Caregiver = mongoose.model("Caregiver");
     
     const services = await ServiceCategory.find({}) as any[];
     for (const service of services) {
-      // Find all verified caregivers that have this service as a specialty
-      const caregivers = await Caregiver.find({ 
-        isVerified: true, 
-        specialties: { $regex: new RegExp(service.title, "i") } 
-      }) as any[];
-      
-      if (caregivers.length > 0) {
-        const minPrice = Math.min(...caregivers.map(cg => cg.hourlyRate || 9999));
-        if (minPrice !== 9999 && minPrice !== Infinity) {
-          service.priceRange = "From $" + minPrice + "/hr";
-          await service.save();
-        }
+      if (service.priceRange !== "Standard Rates") {
+        service.priceRange = "Standard Rates";
+        await service.save();
       }
     }
   } catch (error) {

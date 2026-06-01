@@ -6,6 +6,14 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+function toProperCase(str: string): string {
+  if (!str) return str;
+  return str
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 // Generate JWT
 const generateToken = (id: string) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || "care24_super_secret_key_123", {
@@ -20,7 +28,13 @@ router.post("/signup", async (req, res) => {
   const { name, email, password, role } = req.body;
 
   try {
-    const safeEmail = email.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    if (!email || !name) {
+      return res.status(400).json({ message: "Name and email are required" });
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedName = toProperCase(name.trim());
+
+    const safeEmail = normalizedEmail.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const userExists = await User.findOne({ email: { $regex: new RegExp(`^${safeEmail}$`, "i") } });
 
     if (userExists) {
@@ -28,8 +42,8 @@ router.post("/signup", async (req, res) => {
     }
 
     const user = await User.create({
-      name,
-      email: email.trim(),
+      name: normalizedName,
+      email: normalizedEmail,
       password,
       role: role || "user",
     });
@@ -57,7 +71,11 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const safeEmail = email.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+    const safeEmail = normalizedEmail.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const user: any = await User.findOne({ email: { $regex: new RegExp(`^${safeEmail}$`, "i") } }).select("+password");
 
     if (user && (await user.matchPassword(password))) {

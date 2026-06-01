@@ -34,13 +34,6 @@ const careNoteSchema = new mongoose.Schema(
     temperature: {
       type: Number,
     },
-    // Optional nested block to support legacy CareNote formats
-    vitalSigns: {
-      bloodPressure: { type: String },
-      heartRate: { type: Number },
-      oxygenSaturation: { type: Number },
-      temperature: { type: Number },
-    },
     isAlert: {
       type: Boolean,
       default: false,

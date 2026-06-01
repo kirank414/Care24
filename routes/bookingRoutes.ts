@@ -170,6 +170,16 @@ router.put("/:id/status", protect, async (req: any, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
+    const patientUserId = existing.patient?.user?.toString() || existing.patient?.toString();
+    const caregiverUserId = existing.caregiver?.user?.toString() || existing.caregiver?.toString();
+    const isPatientOwner = patientUserId === req.user._id.toString();
+    const isCaregiverOwner = caregiverUserId === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+
+    if (!isPatientOwner && !isCaregiverOwner && !isAdmin) {
+      return res.status(403).json({ message: "Not authorized to update status for this booking" });
+    }
+
     const allowed = validTransitions[existing.status];
     if (!allowed.includes(status)) {
       return res.status(400).json({
@@ -187,12 +197,12 @@ router.put("/:id/status", protect, async (req: any, res) => {
 
 
     // Send notifications based on status change
-    const patientUserId = booking.patient?.user?._id?.toString() || booking.patient?.user?.toString();
-    const caregiverUserId = booking.caregiver?.user?._id?.toString() || booking.caregiver?.user?.toString();
+    const patientNotifUserId = booking.patient?.user?._id?.toString() || booking.patient?.user?.toString();
+    const caregiverNotifUserId = booking.caregiver?.user?._id?.toString() || booking.caregiver?.user?.toString();
 
-    if (status === "confirmed" && patientUserId) {
+    if (status === "confirmed" && patientNotifUserId) {
       await createNotification(
-        patientUserId,
+        patientNotifUserId,
         "booking_accepted",
         "Booking Confirmed!",
         `Your booking with ${booking.caregiver?.name || "your caregiver"} has been confirmed.`,
@@ -202,9 +212,9 @@ router.put("/:id/status", protect, async (req: any, res) => {
     }
 
     if (status === "completed") {
-      if (patientUserId) {
+      if (patientNotifUserId) {
         await createNotification(
-          patientUserId,
+          patientNotifUserId,
           "booking_completed",
           "Care Session Completed",
           `Your care session has been completed. Thank you for using Care24!`,
@@ -212,9 +222,9 @@ router.put("/:id/status", protect, async (req: any, res) => {
           "Booking"
         );
       }
-      if (caregiverUserId) {
+      if (caregiverNotifUserId) {
         await createNotification(
-          caregiverUserId,
+          caregiverNotifUserId,
           "booking_completed",
           "Session Completed",
           `Care session completed for ${booking.patient?.name || "patient"}.`,
@@ -225,7 +235,7 @@ router.put("/:id/status", protect, async (req: any, res) => {
     }
 
     if (status === "cancelled") {
-      const otherUserId = req.user.role === "patient" ? caregiverUserId : patientUserId;
+      const otherUserId = req.user.role === "patient" ? caregiverNotifUserId : patientNotifUserId;
       if (otherUserId) {
         await createNotification(
           otherUserId,
@@ -293,6 +303,88 @@ router.get("/revenue/me", protect, async (req: any, res) => {
     }));
 
     res.json({ totalEarnings, mtdPay, chartData });
+  } catch (error) {
+    res.status(500).json({ message: (error as Error).message });
+  }
+});
+
+// @desc    Export platform reports as CSV safely
+// @route   GET /api/bookings/export
+// @access  Private (Admin)
+router.get("/export", protect, authorize("admin"), async (req: any, res) => {
+  try {
+    const User = mongoose.model("User");
+    const Caregiver = mongoose.model("Caregiver");
+    const Booking = mongoose.model("Booking");
+    const Complaint = mongoose.model("Complaint");
+    const Inquiry = mongoose.model("Inquiry");
+
+    // Fetch data
+    const [users, caregivers, bookings, complaints, inquiries] = await Promise.all([
+      User.find({}),
+      Caregiver.find({}),
+      Booking.find({}).populate("patient caregiver service"),
+      Complaint.find({}).populate("patient caregiver booking"),
+      Inquiry.find({}).populate("user"),
+    ]);
+
+    let csvContent = "";
+
+    // Helper to escape CSV cell
+    const esc = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      let str = String(val).replace(/"/g, '""').replace(/\n/g, ' ');
+      return `"${str}"`;
+    };
+
+    // Section 1: Users
+    csvContent += "--- USERS LIST ---\n";
+    csvContent += "User ID,Name,Email,Role,Registered Date\n";
+    users.forEach((u: any) => {
+      csvContent += `${esc(u._id)},${esc(u.name)},${esc(u.email)},${esc(u.role)},${esc(u.createdAt)}\n`;
+    });
+    csvContent += "\n";
+
+    // Section 2: Caregivers
+    csvContent += "--- CAREGIVERS LIST ---\n";
+    csvContent += "Caregiver ID,Name,Title,Hourly Rate,Verified,Availability\n";
+    caregivers.forEach((cg: any) => {
+      csvContent += `${esc(cg._id)},${esc(cg.name)},${esc(cg.title)},${cg.hourlyRate || 0},${cg.isVerified ? "Yes" : "No"},${cg.availability ? "Yes" : "No"}\n`;
+    });
+    csvContent += "\n";
+
+    // Section 3: Bookings
+    csvContent += "--- BOOKINGS LIST ---\n";
+    csvContent += "Booking ID,Patient Name,Caregiver Name,Service,Duration Type,Start Date,End Date,Total Amount,Status,Payment Status\n";
+    bookings.forEach((b: any) => {
+      const pName = b.patient?.name || "N/A";
+      const cgName = b.caregiver?.name || "N/A";
+      const sTitle = b.service?.title || "N/A";
+      csvContent += `${esc(b._id)},${esc(pName)},${esc(cgName)},${esc(sTitle)},${esc(b.durationType)},${esc(b.startDate)},${esc(b.endDate)},${b.totalAmount || 0},${esc(b.status)},${esc(b.paymentStatus)}\n`;
+    });
+    csvContent += "\n";
+
+    // Section 4: Complaints
+    csvContent += "--- COMPLAINTS AND DISPUTES ---\n";
+    csvContent += "Complaint ID,Patient Name,Caregiver Name,Title,Description,Status,Resolution\n";
+    complaints.forEach((c: any) => {
+      const pName = c.patient?.name || "N/A";
+      const cgName = c.caregiver?.name || "N/A";
+      csvContent += `${esc(c._id)},${esc(pName)},${esc(cgName)},${esc(c.title)},${esc(c.description)},${esc(c.status)},${esc(c.resolution)}\n`;
+    });
+    csvContent += "\n";
+
+    // Section 5: Inquiries
+    csvContent += "--- SUPPORT INQUIRIES ---\n";
+    csvContent += "Inquiry ID,Email/User,Question,Answer,Status\n";
+    inquiries.forEach((inq: any) => {
+      const identifier = inq.user ? inq.user.email : inq.email;
+      csvContent += `${esc(inq._id)},${esc(identifier)},${esc(inq.question)},${esc(inq.answer)},${esc(inq.status)}\n`;
+    });
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=care24_platform_report.csv");
+    return res.status(200).send(csvContent);
   } catch (error) {
     res.status(500).json({ message: (error as Error).message });
   }

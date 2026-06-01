@@ -15,6 +15,7 @@ import complaintRoutes from "./routes/complaintRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import inquiryRoutes from "./routes/inquiryRoutes.js";
 import settingRoutes from "./routes/settingRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 
@@ -42,6 +43,7 @@ async function startServer() {
   app.use("/api/reviews", reviewRoutes);
   app.use("/api/inquiries", inquiryRoutes);
   app.use("/api/settings", settingRoutes);
+  app.use("/api/users", userRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", message: "Care24 API is operational" });

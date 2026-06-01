@@ -35,6 +35,15 @@ router.post("/", protect, async (req: any, res) => {
       return res.status(403).json({ message: "Not authorized to file complaint for this booking" });
     }
 
+    const existingComplaint = await Complaint.findOne({
+      patient: patientProfile._id,
+      booking: booking._id
+    });
+    
+    if (existingComplaint) {
+      return res.status(400).json({ message: "A complaint/dispute has already been filed for this booking." });
+    }
+
     const complaint = await Complaint.create({
       patient: patientProfile._id,
       caregiver: booking.caregiver,

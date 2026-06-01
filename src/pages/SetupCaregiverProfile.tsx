@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import { useCareStore } from '../stores/careStore';
 import { toast } from 'sonner';
+import { toProperCase } from '@/src/utils/normalize';
 
 export function SetupCaregiverProfilePage() {
   const navigate = useNavigate();
@@ -102,14 +103,15 @@ export function SetupCaregiverProfilePage() {
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Professional Credentials</h3>
                 </div>
 
-                <div className="space-y-2">
+                 <div className="space-y-2">
                   <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Professional Title *</Label>
                   <Input
                     id="title"
                     placeholder="e.g. Certified Senior Caregiver, Senior Caregiver"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                     value={form.title}
                     onChange={e => setForm({ ...form, title: e.target.value })}
+                    onBlur={e => setForm({ ...form, title: toProperCase(e.target.value) })}
                   />
                 </div>
 
@@ -130,7 +132,7 @@ export function SetupCaregiverProfilePage() {
                         id="exp"
                         type="number"
                         placeholder="e.g. 8"
-                        className="pl-12 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                        className="pl-12 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                         value={form.experienceYears}
                         onChange={e => setForm({ ...form, experienceYears: e.target.value })}
                       />
@@ -144,7 +146,7 @@ export function SetupCaregiverProfilePage() {
                         id="rate"
                         type="number"
                         placeholder="e.g. 55"
-                        className="pl-12 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                        className="pl-12 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                         value={form.hourlyRate}
                         onChange={e => setForm({ ...form, hourlyRate: e.target.value })}
                       />
@@ -158,7 +160,7 @@ export function SetupCaregiverProfilePage() {
                     <Award className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                     <select
                       id="specs"
-                      className="w-full pl-12 pr-6 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 appearance-none focus:outline-none focus:border-primary/20"
+                      className="w-full pl-12 pr-6 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800 appearance-none focus:outline-none focus:border-primary/20"
                       value={form.specialties}
                       onChange={e => setForm({ ...form, specialties: e.target.value })}
                     >
@@ -178,7 +180,7 @@ export function SetupCaregiverProfilePage() {
                     <Input
                       id="cities"
                       placeholder="e.g. New York, Newark, Boston"
-                      className="pl-12 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
+                      className="pl-12 h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800"
                       value={form.cities}
                       onChange={e => setForm({ ...form, cities: e.target.value })}
                     />
@@ -191,7 +193,7 @@ export function SetupCaregiverProfilePage() {
                     id="bio"
                     placeholder="Provide a detailed professional background and specialties detail..."
                     rows={4}
-                    className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
+                    className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-semibold text-xs tracking-wider text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
                     value={form.bio}
                     onChange={e => setForm({ ...form, bio: e.target.value })}
                   ></textarea>

@@ -10,30 +10,30 @@ const coreServices = [
   {
     title: "Elderly Attendant",
     description: "Compassionate daily assistance for elderly individuals, including mobility support, meal preparation, and companionship.",
-    priceRange: "From $25/hr",
+    priceRange: "Standard Rates",
     icon: "UserPlus",
     features: ["Mobility Assistance", "Companionship", "Meal Preparation", "Medication Reminders"]
   },
   {
     title: "Nursing Care",
     description: "Professional nursing care for post-surgery recovery, wound dressing, and chronic illness management at home.",
-    priceRange: "From $45/hr",
+    priceRange: "Standard Rates",
     icon: "Activity",
     features: ["Wound Dressing", "Vitals Monitoring", "Injections & IV", "Post-Surgery Care"]
   },
   {
     title: "Physiotherapy",
     description: "Expert physiotherapists to help restore movement, reduce pain, and improve overall physical function.",
-    priceRange: "From $60/session",
+    priceRange: "Standard Rates",
     icon: "Heart",
     features: ["Pain Management", "Mobility Exercises", "Post-Stroke Rehab", "Orthopedic Rehab"]
   },
   {
-    title: "Dementia Care",
-    description: "Specialized care for individuals with Alzheimer's or dementia, focusing on safety, routine, and cognitive engagement.",
-    priceRange: "From $35/hr",
-    icon: "Brain",
-    features: ["Cognitive Stimulation", "Safe Environment", "Behavior Management", "Routine Assistance"]
+    title: "Post-Hospital Care",
+    description: "Professional recovery assistance after discharge, helping patients transition safely from hospital to home.",
+    priceRange: "Standard Rates",
+    icon: "Activity",
+    features: ["Recovery Monitoring", "Medication Assistance", "Mobility Support", "Follow-Up Care"]
   }
 ];
 

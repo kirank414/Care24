@@ -28,7 +28,7 @@ router.post("/", async (req, res) => {
     }
 
     let userId = null;
-    let finalEmail = email;
+    let finalEmail = email ? email.trim().toLowerCase() : undefined;
 
     // Check if user is authenticated (optional token check)
     const authHeader = req.headers.authorization;
@@ -39,7 +39,7 @@ router.post("/", async (req, res) => {
         const user = await User.findById(decoded.id);
         if (user) {
           userId = user._id;
-          finalEmail = user.email;
+          finalEmail = user.email ? user.email.toLowerCase().trim() : undefined;
         }
       } catch (err) {
         // Token verification failed, treat as guest if email is provided
@@ -54,8 +54,26 @@ router.post("/", async (req, res) => {
       user: userId,
       email: finalEmail,
       question,
-      status: "pending",
+      status: "Open",
     });
+
+    // Notify all admin users
+    try {
+      const admins = await User.find({ role: "admin" });
+      const submitterName = userId ? (await User.findById(userId))?.name : "Guest";
+      for (const admin of admins) {
+        await Notification.create({
+          user: admin._id,
+          type: "new_message",
+          title: "New Support Request",
+          message: `Support request submitted by ${submitterName} (${finalEmail}): "${question.substring(0, 30)}..."`,
+          relatedId: inquiry._id,
+          relatedModel: "Inquiry"
+        });
+      }
+    } catch (notifErr) {
+      console.error("Failed to notify admins on inquiry submission:", notifErr);
+    }
 
     res.status(201).json(inquiry);
   } catch (error) {
@@ -106,7 +124,7 @@ router.put("/:id/answer", protect, authorize("admin"), async (req, res) => {
     }
 
     inquiry.answer = answer;
-    inquiry.status = "answered";
+    inquiry.status = "Resolved";
     await inquiry.save();
 
     // If inquiry was submitted by a registered user, send a notification
@@ -118,6 +136,35 @@ router.put("/:id/answer", protect, authorize("admin"), async (req, res) => {
         `Our care concierge team has answered your question: "${inquiry.question.substring(0, 40)}..."`
       );
     }
+
+    res.json(inquiry);
+  } catch (error) {
+    res.status(500).json({ message: (error as Error).message });
+  }
+});
+
+// @desc    Update inquiry status
+// @route   PUT /api/inquiries/:id/status
+// @access  Private (Admin)
+router.put("/:id/status", protect, authorize("admin"), async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!status || !["Open", "In Progress", "Resolved"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const inquiry = await Inquiry.findById(req.params.id);
+    if (!inquiry) {
+      return res.status(404).json({ message: "Inquiry not found" });
+    }
+
+    if (status === "Resolved" && (!inquiry.answer || inquiry.answer.trim() === "")) {
+      return res.status(400).json({ message: "Cannot resolve inquiry without providing an answer first." });
+    }
+
+    inquiry.status = status;
+    await inquiry.save();
 
     res.json(inquiry);
   } catch (error) {

@@ -1,21 +1,24 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, Menu, X, User, Phone, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Heart, Menu, X, User, Phone, ArrowRight, ShieldCheck, Mail, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/src/store';
 import { useCareStore } from '../../stores/careStore';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 
 export function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore();
-  const { resetStore } = useCareStore();
+  const { resetStore, settings, fetchSettings } = useCareStore();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = React.useState(false);
 
   React.useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
+    fetchSettings();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -23,7 +26,7 @@ export function Navbar() {
     { name: 'Home', href: '/' },
     { name: 'Services', href: '/services' },
     { name: 'Expert Network', href: '/caregivers' },
-    { name: 'Methodology', href: '/about' },
+    { name: 'How It Works', href: '/about' },
     { name: 'Pricing', href: '/pricing' },
   ];
 
@@ -47,14 +50,24 @@ export function Navbar() {
                <div className="flex items-center space-x-6">
                   <div className="flex items-center space-x-2">
                      <ShieldCheck size={14} className="text-primary" />
-                     <span className="text-[10px] font-bold text-white uppercase tracking-widest">ISO 9001:2015 Certified Healthcare Provider</span>
+                     <span className="text-[10px] font-bold text-white uppercase tracking-widest">Verified Elderly Home Care Support</span>
                   </div>
+                  {settings?.supportEmail && (
+                     <a href={`mailto:${settings.supportEmail}`} className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors">
+                        <Mail size={14} className="text-primary" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{settings.supportEmail}</span>
+                     </a>
+                  )}
                </div>
                <div className="flex items-center space-x-6">
-                  <a href="tel:180024224" className="flex items-center space-x-2 text-white hover:text-primary transition-colors">
-                     <Phone size={14} />
-                     <span className="text-[10px] font-bold uppercase tracking-widest">Medical Support: 1-800-CARE-24</span>
-                  </a>
+                  {settings?.supportPhone ? (
+                     <a href={`tel:${settings.supportPhone.replace(/[^\d+]/g, '')}`} className="flex items-center space-x-2 text-white hover:text-primary transition-colors">
+                        <Phone size={14} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Family Support: {settings.supportPhone}</span>
+                     </a>
+                  ) : (
+                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Support Line: Information will be updated by the administrator.</span>
+                  )}
                   <Link to="/partners" className="text-[10px] font-bold text-slate-400 hover:text-white transition-colors uppercase tracking-widest">Corporate Solutions</Link>
                </div>
             </div>
@@ -92,9 +105,11 @@ export function Navbar() {
                 <div className="hidden xl:flex flex-col items-end mr-2">
                    <div className="flex items-center gap-2 text-slate-900">
                       <Phone size={14} className="text-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Emergency Support</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Support Line</span>
                    </div>
-                   <span className="text-[10px] font-bold text-primary uppercase tracking-widest leading-none">24/7 Available</span>
+                   <span className="text-[10px] font-bold text-primary uppercase tracking-widest leading-none">
+                      {settings?.supportPhone || '24/7 Available'}
+                   </span>
                 </div>
                 {isAuthenticated ? (
                   <div className="flex items-center space-x-3">

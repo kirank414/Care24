@@ -1,6 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
-import Caregiver from "../models/Caregiver.js";
+import Caregiver, { updateServicePrices } from "../models/Caregiver.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -45,17 +45,30 @@ router.get("/me", protect, async (req: any, res) => {
   }
 });
 
+function toProperCase(str: string): string {
+  if (!str) return str;
+  return str
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 // @desc    Create or update caregiver profile
 // @route   POST /api/caregivers
 // @access  Private
 router.post("/", protect, async (req: any, res) => {
   try {
+    if (req.user.role !== "caregiver") {
+      return res.status(403).json({ message: "Only users with role 'caregiver' can create or update a caregiver profile" });
+    }
+
     console.log(`[POST /api/caregivers] Received body:`, JSON.stringify(req.body));
     console.log(`[POST /api/caregivers] Authenticated User ID: ${req.user?._id}`);
 
+    const rawName = req.body.name || req.user.name;
     const payload = {
       ...req.body,
-      name: req.body.name || req.user.name,
+      name: rawName ? toProperCase(rawName.trim()) : "",
     };
 
     let caregiver = await Caregiver.findOne({ user: req.user._id });
@@ -134,31 +147,10 @@ router.delete("/:id", protect, authorize("admin"), async (req: any, res) => {
   try {
     const caregiver = await Caregiver.findByIdAndDelete(req.params.id);
     if (caregiver) {
+      await updateServicePrices();
       res.json({ message: "Caregiver profile deleted successfully" });
     } else {
       res.status(404).json({ message: "Caregiver not found" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: (error as Error).message });
-  }
-});
-
-// @desc    Admin toggle caregiver availability
-// @route   PUT /api/caregivers/:id/availability
-// @access  Private/Admin
-router.put("/:id/availability", protect, authorize("admin"), async (req: any, res) => {
-  try {
-    const { availability } = req.body;
-    const caregiver = await Caregiver.findByIdAndUpdate(
-      req.params.id,
-      { availability: availability !== undefined ? availability : true },
-      { new: true }
-    ).populate("user", "name email");
-
-    if (caregiver) {
-      res.json(caregiver);
-    } else {
-      res.status(404).json({ message: "Caregiver profile not found" });
     }
   } catch (error) {
     res.status(500).json({ message: (error as Error).message });
@@ -177,6 +169,28 @@ router.put("/me/availability", protect, async (req: any, res) => {
       { availability: availability !== undefined ? availability : true },
       { new: true }
     );
+
+    if (caregiver) {
+      res.json(caregiver);
+    } else {
+      res.status(404).json({ message: "Caregiver profile not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: (error as Error).message });
+  }
+});
+
+// @desc    Admin toggle caregiver availability
+// @route   PUT /api/caregivers/:id/availability
+// @access  Private/Admin
+router.put("/:id/availability", protect, authorize("admin"), async (req: any, res) => {
+  try {
+    const { availability } = req.body;
+    const caregiver = await Caregiver.findByIdAndUpdate(
+      req.params.id,
+      { availability: availability !== undefined ? availability : true },
+      { new: true }
+    ).populate("user", "name email");
 
     if (caregiver) {
       res.json(caregiver);

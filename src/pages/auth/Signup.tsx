@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/api';
 import { toast } from 'sonner';
+import { toProperCase, normalizeEmail } from '@/src/utils/normalize';
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -39,15 +40,15 @@ export function SignupPage() {
     }
   }, [isAuthenticated, role, navigate, location]);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupFormValues>({
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
   });
 
   const onSubmit = async (data: SignupFormValues) => {
     try {
       const response = await api.post('/auth/signup', {
-        name: data.name,
-        email: data.email,
+        name: toProperCase(data.name.trim()),
+        email: data.email.toLowerCase().trim(),
         password: data.password,
         role: data.role,
       });
@@ -115,8 +116,12 @@ export function SignupPage() {
                   <Input 
                     id="name" 
                     placeholder="Enter full name"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
-                    {...register('name')}
+                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    {...register('name', {
+                      onBlur: (e) => {
+                        setValue('name', toProperCase(e.target.value.trim()));
+                      }
+                    })}
                   />
                 </div>
                 {errors.name && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.name.message}</p>}
@@ -129,8 +134,12 @@ export function SignupPage() {
                   <Input 
                     id="email" 
                     placeholder="email@example.com"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
-                    {...register('email')}
+                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs lowercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    {...register('email', {
+                      onBlur: (e) => {
+                        setValue('email', normalizeEmail(e.target.value));
+                      }
+                    })}
                   />
                 </div>
                 {errors.email && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.email.message}</p>}
@@ -144,7 +153,7 @@ export function SignupPage() {
                     id="password" 
                     type="password" 
                     placeholder="••••••••"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
                     {...register('password')}
                   />
                 </div>
@@ -159,7 +168,7 @@ export function SignupPage() {
                     id="confirmPassword" 
                     type="password" 
                     placeholder="••••••••"
-                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
+                    className="pl-16 h-20 bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0" 
                     {...register('confirmPassword')}
                   />
                 </div>
@@ -172,7 +181,7 @@ export function SignupPage() {
                   <User className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 pointer-events-none" />
                   <select 
                     id="role"
-                    className="pl-16 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs uppercase tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 outline-none text-slate-800"
+                    className="pl-16 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-xs tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 outline-none text-slate-800"
                     {...register('role')}
                   >
                     <option value="user">Patient or Family Member</option>
