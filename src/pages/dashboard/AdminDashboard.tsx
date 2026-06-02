@@ -1079,8 +1079,51 @@ export function AdminDashboard() {
                       <TableCell className="font-medium text-slate-900 text-xs max-w-[200px] truncate">
                         {inq.question}
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600 max-w-[200px] truncate">
-                        {inq.answer || <span className="italic text-slate-400">Not answered yet</span>}
+                      <TableCell className="text-xs text-slate-600">
+                        {answeringInquiryId === inq._id ? (
+                          <div className="flex flex-col gap-2">
+                            <textarea 
+                              autoFocus
+                              value={answerText}
+                              onChange={(e) => setAnswerText(e.target.value)}
+                              placeholder="Type answer here..."
+                              className="min-h-[80px] p-2 border border-slate-300 rounded-lg text-xs w-full max-w-sm font-semibold text-slate-800 resize-y focus:outline-none focus:ring-2 focus:ring-slate-900"
+                            />
+                            <div className="flex gap-2">
+                              <button 
+                                className="h-7 px-4 bg-slate-950 hover:bg-slate-800 text-white rounded-md text-[10px] font-bold"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleAnswerSubmit(inq._id);
+                                }}
+                              >
+                                Send
+                              </button>
+                              <button 
+                                className="h-7 px-3 border border-slate-300 rounded-md text-[10px] font-bold"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setAnsweringInquiryId(null);
+                                  setAnswerText('');
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div 
+                            className="cursor-pointer group flex flex-col w-full max-w-sm"
+                            onClick={() => {
+                              setAnsweringInquiryId(inq._id);
+                              setAnswerText(inq.answer || '');
+                            }}
+                          >
+                            <span className={`block break-words ${inq.answer ? "" : "italic text-slate-400"}`}>
+                              {inq.answer || "Click here to type answer..."}
+                            </span>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
@@ -1093,66 +1136,23 @@ export function AdminDashboard() {
                       </TableCell>
                       <TableCell className="pr-8 text-right">
                         <div className="flex items-center gap-2 justify-end">
-                          {answeringInquiryId === inq._id ? (
-                            <div className="flex flex-col gap-2 items-end">
-                              <Input 
-                                value={answerText}
-                                onChange={(e) => setAnswerText(e.target.value)}
-                                placeholder="Type answer here..."
-                                className="h-10 text-xs w-48 font-semibold text-slate-800"
-                              />
-                              <div className="flex gap-2">
-                                <Button 
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 rounded-lg text-[10px] font-bold"
-                                  onClick={() => {
-                                    setAnsweringInquiryId(null);
-                                    setAnswerText('');
-                                  }}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button 
-                                  size="sm"
-                                  className="h-8 rounded-lg bg-slate-950 text-white text-[10px] font-bold"
-                                  onClick={() => handleAnswerSubmit(inq._id)}
-                                >
-                                  Submit
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <select
-                                value={inq.status}
-                                onChange={async (e) => {
-                                  try {
-                                    await updateInquiryStatus(inq._id, e.target.value);
-                                    toast.success('Inquiry status updated successfully!');
-                                    fetchInquiries(true);
-                                  } catch (err: any) {
-                                    toast.error(err.response?.data?.message || err.message || 'Failed to update status');
-                                  }
-                                }}
-                                className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-slate-950 outline-none"
-                              >
-                                <option value="Open">Open</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Resolved">Resolved</option>
-                              </select>
-                              <Button 
-                                variant="ghost" 
-                                className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2"
-                                onClick={() => {
-                                  setAnsweringInquiryId(inq._id);
-                                  setAnswerText(inq.answer || '');
-                                }}
-                              >
-                                <Edit2 size={14} /> ANSWER
-                              </Button>
-                            </>
-                          )}
+                          <select
+                            value={inq.status}
+                            onChange={async (e) => {
+                              try {
+                                await updateInquiryStatus(inq._id, e.target.value);
+                                toast.success('Inquiry status updated successfully!');
+                                fetchInquiries(true);
+                              } catch (err: any) {
+                                toast.error(err.response?.data?.message || err.message || 'Failed to update status');
+                              }
+                            }}
+                            className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-slate-950 outline-none"
+                          >
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                          </select>
                         </div>
                       </TableCell>
                     </TableRow>

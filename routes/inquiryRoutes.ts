@@ -111,6 +111,7 @@ router.get("/", protect, authorize("admin"), async (req, res) => {
 // @route   PUT /api/inquiries/:id/answer
 // @access  Private (Admin)
 router.put("/:id/answer", protect, authorize("admin"), async (req, res) => {
+  console.log(`Received answer request for inquiry ${req.params.id} with body:`, req.body);
   try {
     const { answer } = req.body;
 
@@ -131,9 +132,9 @@ router.put("/:id/answer", protect, authorize("admin"), async (req, res) => {
     if (inquiry.user) {
       await createNotification(
         inquiry.user.toString(),
-        "new_message",
+        "admin_message",
         "Your Question has been Answered!",
-        `Our care concierge team has answered your question: "${inquiry.question.substring(0, 40)}..."`
+        `Our team has answered your question: "${inquiry.question?.substring(0, 40) || ''}..."\n\nAnswer: ${answer}`
       );
     }
 
