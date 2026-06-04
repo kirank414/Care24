@@ -48,7 +48,7 @@ export function Footer() {
               </div>
               <div className="flex flex-col">
                 <span className="text-3xl font-black tracking-tighter text-white">
-                  {settings?.companyName ? settings.companyName : <><span className="text-white">Care</span><span className="text-primary">24</span></>}
+                  <span className="text-white">Care</span><span className="text-primary">24</span>
                 </span>
                 <span className="text-[8px] font-black text-slate-600 uppercase tracking-[0.4em] mt-1">Elderly Care Platform</span>
               </div>
@@ -56,27 +56,27 @@ export function Footer() {
             <div>
               <p className="text-white font-bold text-xs uppercase tracking-widest mb-3">About Care24</p>
               <p className="text-slate-500 font-medium leading-relaxed text-xs">
-                {settings?.footerDescription || "Compassionate elderly nursing and home healthcare assistance. Connecting families with verified caregivers, nurses, physiotherapists, and attendants for quality care at home."}
+                Compassionate elderly nursing and home healthcare assistance. Connecting families with verified caregivers, nurses, physiotherapists, and attendants for quality care at home.
               </p>
             </div>
             <div className="flex gap-4">
               {settings?.facebookUrl && (
-                <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110">
+                <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110" title="Facebook">
                   <Globe size={20} />
                 </a>
               )}
               {settings?.instagramUrl && (
-                <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110">
+                <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110" title="Instagram">
                   <Camera size={20} />
                 </a>
               )}
               {settings?.linkedinUrl && (
-                <a href={settings.linkedinUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110">
+                <a href={settings.linkedinUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110" title="LinkedIn">
                   <Briefcase size={20} />
                 </a>
               )}
               {settings?.twitterUrl && (
-                <a href={settings.twitterUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110">
+                <a href={settings.twitterUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/5 hover:bg-white hover:text-slate-950 transition-all duration-500 hover:scale-110" title="Twitter">
                   <MessageSquare size={20} />
                 </a>
               )}
@@ -150,17 +150,6 @@ export function Footer() {
                   </div>
                 </a>
               )}
-              <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
-                <Globe size={18} className="text-primary shrink-0 mt-0.5" />
-                <div>
-                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Service Coverage</p>
-                   <p className="text-xs font-bold text-slate-300 leading-relaxed">
-                     {settings?.supportedCities && settings.supportedCities.filter(Boolean).length > 0 
-                       ? settings.supportedCities.filter(Boolean).join(', ') 
-                       : "Service availability varies by region. Contact our team for coverage information."}
-                   </p>
-                </div>
-              </div>
             </div>
           </div>
         </div>

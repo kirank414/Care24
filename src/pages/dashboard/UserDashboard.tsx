@@ -31,7 +31,6 @@ import {
   Edit2,
   Languages,
   BookOpen,
-  Phone,
   Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -234,10 +233,32 @@ export function UserDashboard() {
     if (!selectedService || !selectedCaregiver) return;
     // Validate based on duration type
     if (durationType === 'hourly') {
-      if (!startDate || !startTime || !endTime) return;
+      if (!startDate || !startTime || !endTime) {
+        toast.error('Please select a valid date and time for the booking.');
+        return;
+      }
     } else if (durationType === 'daily') {
-      if (!startDate || !endDate) return;
+      if (!startDate || !endDate) {
+        toast.error('Please select both a start date and end date.');
+        return;
+      }
     } // long-term requires no dates
+
+    const start = new Date(startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (start < today) {
+      toast.error('Start date cannot be in the past.');
+      return;
+    }
+
+    if (durationType === 'daily') {
+      const end = new Date(endDate);
+      if (end < start) {
+        toast.error('End date must be the same as or after the start date.');
+        return;
+      }
+    }
 
     const cg = caregivers.find(c => c._id === selectedCaregiver);
     const rate = cg?.hourlyRate || 45;
@@ -274,23 +295,28 @@ export function UserDashboard() {
       amount = 0;
     }
 
-    await createBooking({
-      patient: patient?._id,
-      caregiver: selectedCaregiver,
-      service: selectedService,
-      durationType,
-      startDate: durationType === 'hourly' ? startDate : startDate,
-      endDate: durationType === 'hourly' ? startDate : endDate,
-      startTime: durationType === 'hourly' ? startTime : undefined,
-      endTime: durationType === 'hourly' ? endTime : undefined,
-      totalAmount: amount,
-    });
+    try {
+      await createBooking({
+        patient: patient?._id,
+        caregiver: selectedCaregiver,
+        service: selectedService,
+        durationType,
+        startDate: durationType === 'hourly' ? startDate : startDate,
+        endDate: durationType === 'hourly' ? startDate : endDate,
+        startTime: durationType === 'hourly' ? startTime : undefined,
+        endTime: durationType === 'hourly' ? endTime : undefined,
+        totalAmount: amount,
+      });
 
-    setBookingSuccess(true);
-    setTimeout(() => {
-      setBookingSuccess(false);
-      setIsModalOpen(false);
-    }, 2000);
+      setBookingSuccess(true);
+      setTimeout(() => {
+        setBookingSuccess(false);
+        setIsModalOpen(false);
+      }, 2000);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to submit booking.');
+      return;
+    }
   };
 
   const openEditProfile = () => {
@@ -1251,38 +1277,6 @@ export function UserDashboard() {
                        </Button>
                     </div>
                 </div>
-             </div>
-
-             {/* Coordinator Contact / Support Request */}
-             <div className="p-10 rounded-[40px] bg-blue-50/50 border-2 border-blue-100 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/50 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
-                <div className="flex items-center gap-5 mb-8">
-                   <div className="w-16 h-16 bg-white border border-blue-100 text-primary rounded-3xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                      <Phone size={32} />
-                   </div>
-                   <div>
-                      <h5 className="font-bold text-xl text-slate-900 tracking-tight">Coordinator Help</h5>
-                      <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1">Direct Support Desk</p>
-                   </div>
-                </div>
-                <p className="text-slate-600 text-sm font-medium leading-relaxed mb-10">Need scheduling assistance or have a care question? Instantly notify your assigned coordinator to contact you.</p>
-                <Button 
-                   onClick={async () => {
-                     try {
-                       await submitInquiry({
-                         question: `Support call requested by patient: ${patient?.name || user?.name || "Anonymous Patient"}`,
-                         email: patient?.phone || user?.email || "N/A"
-                       });
-                       toast.success('Support call request sent. Your care coordinator will contact you shortly.');
-                       fetchInquiries();
-                     } catch (err: any) {
-                       toast.error(err.response?.data?.message || err.message || 'Failed to request support call');
-                     }
-                   }}
-                   className="w-full h-16 rounded-[24px] bg-slate-950 hover:bg-slate-900 text-white font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-                >
-                   REQUEST SUPPORT CALL
-                </Button>
              </div>
 
               {/* Upcoming Visits Widget */}

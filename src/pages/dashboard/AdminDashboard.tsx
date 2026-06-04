@@ -96,21 +96,15 @@ export function AdminDashboard() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const [settingsForm, setSettingsForm] = useState({
-    heroTitle: '', heroSubtitle: '', heroPrimaryCTA: '', heroSecondaryCTA: '',
-    satisfactionTitle: '', satisfactionDescription: '', caregiverTrustTitle: '', caregiverTrustDescription: '',
-    serviceCoverageTitle: '', serviceCoverageDescription: '', companyName: '', footerDescription: '',
-    supportEmail: '', supportPhone: '', whatsappNumber: '', supportHours: '', officeAddress: '',
-    supportedCities: '', facebookUrl: '', instagramUrl: '', linkedinUrl: '', twitterUrl: '',
+    supportEmail: '', supportPhone: '', officeAddress: '',
+    facebookUrl: '', instagramUrl: '', linkedinUrl: '', twitterUrl: '',
   });
 
   useEffect(() => {
     if (settings) {
       setSettingsForm({
-        heroTitle: settings.heroTitle || '', heroSubtitle: settings.heroSubtitle || '', heroPrimaryCTA: settings.heroPrimaryCTA || '', heroSecondaryCTA: settings.heroSecondaryCTA || '',
-        satisfactionTitle: settings.satisfactionTitle || '', satisfactionDescription: settings.satisfactionDescription || '', caregiverTrustTitle: settings.caregiverTrustTitle || '', caregiverTrustDescription: settings.caregiverTrustDescription || '',
-        serviceCoverageTitle: settings.serviceCoverageTitle || '', serviceCoverageDescription: settings.serviceCoverageDescription || '', companyName: settings.companyName || '', footerDescription: settings.footerDescription || '',
-        supportEmail: settings.supportEmail || '', supportPhone: settings.supportPhone || '', whatsappNumber: settings.whatsappNumber || '', supportHours: settings.supportHours || '', officeAddress: settings.officeAddress || '',
-        supportedCities: settings.supportedCities?.join(', ') || '', facebookUrl: settings.facebookUrl || '', instagramUrl: settings.instagramUrl || '', linkedinUrl: settings.linkedinUrl || '', twitterUrl: settings.twitterUrl || '',
+        supportEmail: settings.supportEmail || '', supportPhone: settings.supportPhone || '', officeAddress: settings.officeAddress || '',
+        facebookUrl: settings.facebookUrl || '', instagramUrl: settings.instagramUrl || '', linkedinUrl: settings.linkedinUrl || '', twitterUrl: settings.twitterUrl || '',
       });
     }
   }, [settings]);
@@ -118,14 +112,7 @@ export function AdminDashboard() {
   const handleSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const citiesArray = settingsForm.supportedCities
-        .split(',')
-        .map(c => c.trim())
-        .filter(Boolean);
-      await updateSettings({
-        ...settingsForm,
-        supportedCities: citiesArray,
-      });
+      await updateSettings(settingsForm);
       const timestamp = new Date().toLocaleTimeString();
       setLastUpdated(timestamp);
       toast.success(`Platform settings updated successfully at ${timestamp}.`);
@@ -254,11 +241,11 @@ export function AdminDashboard() {
   const [selectedCaregiverForDetails, setSelectedCaregiverForDetails] = useState<any>(null);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [activeAdminPanelTab, setActiveAdminPanelTab] = useState('services');
+  const [newCityInput, setNewCityInput] = useState('');
   
   const [serviceForm, setServiceForm] = useState({
     title: '',
     description: '',
-    priceRange: '',
     icon: 'Heart',
     features: '',
     isActive: true,
@@ -299,6 +286,35 @@ export function AdminDashboard() {
       } catch (err: any) {
         toast.error(err.response?.data?.message || err.message || 'Failed to delete caregiver');
       }
+    }
+  };
+
+  const handleAddCity = async () => {
+    if (!selectedCaregiverForDetails || !newCityInput.trim()) return;
+    
+    try {
+      const updatedCities = [...(selectedCaregiverForDetails.cities || []), newCityInput.trim()];
+      await api.put(`/caregivers/${selectedCaregiverForDetails._id}`, { cities: updatedCities });
+      toast.success('City added successfully');
+      setNewCityInput('');
+      fetchCaregivers(true);
+      setSelectedCaregiverForDetails({ ...selectedCaregiverForDetails, cities: updatedCities });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to add city');
+    }
+  };
+
+  const handleRemoveCity = async (cityToRemove: string) => {
+    if (!selectedCaregiverForDetails) return;
+    
+    try {
+      const updatedCities = selectedCaregiverForDetails.cities?.filter((c: string) => c !== cityToRemove) || [];
+      await api.put(`/caregivers/${selectedCaregiverForDetails._id}`, { cities: updatedCities });
+      toast.success('City removed successfully');
+      fetchCaregivers(true);
+      setSelectedCaregiverForDetails({ ...selectedCaregiverForDetails, cities: updatedCities });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to remove city');
     }
   };
 
@@ -360,7 +376,6 @@ export function AdminDashboard() {
     setServiceForm({
       title: '',
       description: '',
-      priceRange: 'Standard Rates',
       icon: 'Heart',
       features: '',
       isActive: true,
@@ -373,7 +388,6 @@ export function AdminDashboard() {
     setServiceForm({
       title: service.title,
       description: service.description,
-      priceRange: service.priceRange,
       icon: service.icon,
       features: service.features?.join(', ') || '',
       isActive: service.isActive !== false,
@@ -383,7 +397,7 @@ export function AdminDashboard() {
 
   const handleServiceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!serviceForm.title || !serviceForm.description || !serviceForm.priceRange) {
+    if (!serviceForm.title || !serviceForm.description) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -391,7 +405,6 @@ export function AdminDashboard() {
     const payload = {
       title: serviceForm.title,
       description: serviceForm.description,
-      priceRange: serviceForm.priceRange,
       icon: serviceForm.icon,
       features: serviceForm.features.split(',').map(s => s.trim()).filter(Boolean),
       isActive: serviceForm.isActive,
@@ -436,12 +449,11 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[650px]">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
                   <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver</TableHead>
                   <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Specialty</TableHead>
-                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Rate / Hr</TableHead>
                   <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
                   <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
                 </TableRow>
@@ -465,7 +477,6 @@ export function AdminDashboard() {
                         </div>
                       </TableCell>
                       <TableCell className="font-bold text-slate-700 text-xs max-w-[180px] truncate">{filterSpecialties(cg.specialties)}</TableCell>
-                      <TableCell className="font-bold text-slate-900 text-sm">${cg.hourlyRate || 45}</TableCell>
                       <TableCell>
                         <Badge className={`rounded-full px-4 py-1.5 border-none font-black text-[9px] uppercase tracking-widest ${
                           cg.isVerified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
@@ -478,7 +489,7 @@ export function AdminDashboard() {
                           {!cg.isVerified && (
                             <Button 
                               variant="ghost" 
-                              className="h-10 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
+                              className="h-11 md:h-10 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
                               onClick={() => handleApproveVerification(cg._id)}
                               disabled={loading}
                             >
@@ -554,11 +565,12 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[650px]">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
                   <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Name</TableHead>
                   <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Email</TableHead>
+                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Phone</TableHead>
                   <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Role</TableHead>
                   <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Registered</TableHead>
                   <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
@@ -580,6 +592,7 @@ export function AdminDashboard() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs font-medium text-slate-600">{u.email || 'N/A'}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-600">{u.phone || 'N/A'}</TableCell>
                       <TableCell>
                         <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
                           u.role === 'admin' ? 'bg-violet-100 text-violet-700' :
@@ -601,7 +614,7 @@ export function AdminDashboard() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-12 text-center text-slate-400 font-bold text-xs">
+                    <TableCell colSpan={6} className="py-12 text-center text-slate-400 font-bold text-xs">
                       No registered users found.
                     </TableCell>
                   </TableRow>
@@ -641,7 +654,7 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[750px]">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
                   <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient</TableHead>
@@ -704,7 +717,7 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[650px]">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
                   <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Complaint Title</TableHead>
@@ -749,7 +762,7 @@ export function AdminDashboard() {
                       <TableCell className="pr-8 text-right">
                         <Button 
                           variant="ghost" 
-                          className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2"
+                          className="h-11 md:h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2"
                           onClick={() => {
                             setSelectedComplaint(c);
                             setResolutionText(c.resolution || '');
@@ -779,23 +792,47 @@ export function AdminDashboard() {
   const renderAlertsSidebar = () => {
     const alertsList = notifications.length > 0 
       ? notifications.slice(0, 8).map(n => ({
-          title: `${n.title}: ${n.message}`,
+          id: n._id,
+          title: n.title,
+          message: n.message,
           time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
           type: n.type === 'alert_generated' || n.type === 'booking_cancelled' ? 'warning' :
                 n.type === 'booking_completed' ? 'success' : 'info'
         }))
       : [
-          { title: 'No recent operational alerts', time: 'Now', type: 'info' }
+          { id: 'no-alerts', title: 'No recent operational alerts', message: 'System operating normally', time: 'Now', type: 'info' }
         ];
+    
+    const handleAlertClick = (alert: any) => {
+      if (alert.id === 'no-alerts') return;
+      toast.info(`${alert.title}: ${alert.message}`);
+    };
+
     return (
       <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden h-full">
         <CardHeader className="p-8 border-b border-slate-100 pb-6">
-          <CardTitle className="text-2xl font-bold tracking-tight">Recent Operational Alerts</CardTitle>
-          <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Live operational events feed</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl font-bold tracking-tight">Recent Operational Alerts</CardTitle>
+              <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Live operational events feed</CardDescription>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900"
+              onClick={() => fetchNotifications()}
+            >
+              <Activity size={14} className="mr-2" /> Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-8 space-y-6">
           {alertsList.map((alert, i) => (
-            <div key={i} className="flex items-start space-x-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-slate-200 transition-colors">
+            <div 
+              key={i} 
+              className="flex items-start space-x-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-slate-200 transition-colors cursor-pointer group"
+              onClick={() => handleAlertClick(alert)}
+            >
               <div className={`mt-0.5 p-2 rounded-xl shadow-sm ${
                 alert.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
                 alert.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
@@ -804,8 +841,9 @@ export function AdminDashboard() {
                 <AlertCircle size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-bold text-slate-900 text-sm tracking-tight leading-snug">{alert.title}</h4>
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">{alert.time}</p>
+                <h4 className="font-bold text-slate-900 text-sm tracking-tight leading-snug group-hover:text-primary transition-colors">{alert.title}</h4>
+                <p className="text-[11px] text-slate-500 font-medium leading-snug mt-1 line-clamp-2">{alert.message}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">{alert.time}</p>
               </div>
             </div>
           ))}
@@ -856,12 +894,11 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[750px]">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
                   <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Service Category</TableHead>
                   <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Description</TableHead>
-                  <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Price Range</TableHead>
                   <TableHead className="font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Status</TableHead>
                   <TableHead className="pr-8 text-right font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Actions</TableHead>
                 </TableRow>
@@ -875,9 +912,6 @@ export function AdminDashboard() {
                     <TableCell className="font-medium text-slate-500 text-xs truncate max-w-[250px]">
                       {srv.description}
                     </TableCell>
-                    <TableCell className="font-bold text-slate-900 text-sm">
-                      {srv.priceRange}
-                    </TableCell>
                     <TableCell>
                       <Badge className={`rounded-full px-3 py-1 border-none font-black text-[8px] uppercase tracking-widest ${
                         srv.isActive !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
@@ -889,7 +923,7 @@ export function AdminDashboard() {
                       <div className="flex justify-end space-x-2">
                         <Button 
                           variant="ghost" 
-                          className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
+                          className="h-11 md:h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
                           onClick={() => handleOpenEditService(srv)}
                         >
                           <Edit2 size={16} /> EDIT
@@ -938,7 +972,7 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[700px]">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
                   <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Caregiver</TableHead>
@@ -1001,7 +1035,7 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[650px]">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
                   <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient Name</TableHead>
@@ -1049,7 +1083,7 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[650px]">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
                   <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">User / Email</TableHead>
@@ -1187,7 +1221,7 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[700px]">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
                   <TableHead className="pl-8 font-bold text-slate-400 uppercase text-[10px] tracking-widest h-12">Patient</TableHead>
@@ -1221,7 +1255,7 @@ export function AdminDashboard() {
                       <TableCell className="pr-8 text-right">
                         <Button 
                           variant="ghost" 
-                          className="h-10 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xs flex items-center gap-2"
+                          className="h-11 md:h-10 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xs flex items-center gap-2"
                           onClick={() => {
                             setSelectedComplaint(c);
                             setResolutionText(c.resolution || '');
@@ -1247,146 +1281,45 @@ export function AdminDashboard() {
     );
   };
 
-  const renderSettingsContent = () => {
+  const renderSupportInfoContent = () => {
     return (
       <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
         <CardHeader className="p-8 border-b border-slate-100">
-          <CardTitle className="text-2xl font-bold tracking-tight">Platform Settings</CardTitle>
-          <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage global site content, branding, and social links</CardDescription>
+          <CardTitle className="text-2xl font-bold tracking-tight">Support Information</CardTitle>
+          <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage support information and social links</CardDescription>
         </CardHeader>
         <CardContent className="p-8 max-h-[600px] overflow-y-auto">
           <form onSubmit={handleSettingsSubmit} className="space-y-12">
             <div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Homepage Messaging</h3>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Support Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Hero Title</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Phone</Label>
                   <Input
-                    placeholder="e.g. Compassionate Care"
+                    placeholder="e.g. +1 (800) 555-0123"
                     className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.heroTitle}
-                    onChange={e => setSettingsForm({ ...settingsForm, heroTitle: e.target.value })}
+                    value={settingsForm.supportPhone}
+                    onChange={e => setSettingsForm({ ...settingsForm, supportPhone: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Hero Subtitle</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Email</Label>
                   <Input
-                    placeholder="e.g. Professional nursing and elderly care"
+                    type="email"
+                    placeholder="e.g. support@care24.com"
                     className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.heroSubtitle}
-                    onChange={e => setSettingsForm({ ...settingsForm, heroSubtitle: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Primary CTA Button</Label>
-                  <Input
-                    placeholder="e.g. Find a Caregiver"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.heroPrimaryCTA}
-                    onChange={e => setSettingsForm({ ...settingsForm, heroPrimaryCTA: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Secondary CTA Button</Label>
-                  <Input
-                    placeholder="e.g. Our Services"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.heroSecondaryCTA}
-                    onChange={e => setSettingsForm({ ...settingsForm, heroSecondaryCTA: e.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Trust & Credibility Cards</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 1 Title</Label>
-                  <Input
-                    placeholder="e.g. Patient Satisfaction"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.satisfactionTitle}
-                    onChange={e => setSettingsForm({ ...settingsForm, satisfactionTitle: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 1 Description</Label>
-                  <Input
-                    placeholder="e.g. Verified Family Reviews"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.satisfactionDescription}
-                    onChange={e => setSettingsForm({ ...settingsForm, satisfactionDescription: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 2 Title</Label>
-                  <Input
-                    placeholder="e.g. Verified Caregivers"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.caregiverTrustTitle}
-                    onChange={e => setSettingsForm({ ...settingsForm, caregiverTrustTitle: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 2 Description</Label>
-                  <Input
-                    placeholder="e.g. Background Checked Professionals"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.caregiverTrustDescription}
-                    onChange={e => setSettingsForm({ ...settingsForm, caregiverTrustDescription: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 3 Title</Label>
-                  <Input
-                    placeholder="e.g. Service Coverage"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.serviceCoverageTitle}
-                    onChange={e => setSettingsForm({ ...settingsForm, serviceCoverageTitle: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Card 3 Description</Label>
-                  <Input
-                    placeholder="e.g. Multi-City Support Network"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.serviceCoverageDescription}
-                    onChange={e => setSettingsForm({ ...settingsForm, serviceCoverageDescription: e.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Company Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Company Name</Label>
-                  <Input
-                    placeholder="e.g. Care24"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.companyName}
-                    onChange={e => setSettingsForm({ ...settingsForm, companyName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Supported Cities (comma-separated)</Label>
-                  <Input
-                    placeholder="e.g. New York, San Francisco, Los Angeles"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.supportedCities}
-                    onChange={e => setSettingsForm({ ...settingsForm, supportedCities: e.target.value })}
+                    value={settingsForm.supportEmail}
+                    onChange={e => setSettingsForm({ ...settingsForm, supportEmail: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Footer Description</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Office Address</Label>
                   <textarea
-                    placeholder="e.g. Empowering families with professional home care..."
-                    rows={2}
+                    placeholder="e.g. 123 Healthcare Boulevard, Suite 100, New York, NY 10001"
+                    rows={3}
                     className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
-                    value={settingsForm.footerDescription}
-                    onChange={e => setSettingsForm({ ...settingsForm, footerDescription: e.target.value })}
+                    value={settingsForm.officeAddress}
+                    onChange={e => setSettingsForm({ ...settingsForm, officeAddress: e.target.value })}
                   />
                 </div>
               </div>
@@ -1440,65 +1373,6 @@ export function AdminDashboard() {
                 className="w-full md:w-auto h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] px-10 shadow-xl active:scale-95 transition-all md:ml-auto"
                 disabled={loading}
               >
-                {loading ? <Loader2 className="animate-spin" size={20} /> : 'SAVE PLATFORM SETTINGS'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const renderSupportInfoContent = () => {
-    return (
-      <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden">
-        <CardHeader className="p-8 border-b border-slate-100">
-          <CardTitle className="text-2xl font-bold tracking-tight">Support Information</CardTitle>
-          <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage global contact channels and office address configurations</CardDescription>
-        </CardHeader>
-        <CardContent className="p-8 max-h-[600px] overflow-y-auto">
-          <form onSubmit={handleSettingsSubmit} className="space-y-12">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight mb-4 border-b pb-2">Support Hotline & Email</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Hotline</Label>
-                  <Input
-                    placeholder="e.g. +1 (800) 123-4567"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.supportPhone}
-                    onChange={e => setSettingsForm({ ...settingsForm, supportPhone: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Support Email</Label>
-                  <Input
-                    type="email"
-                    placeholder="e.g. support@care24.com"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
-                    value={settingsForm.supportEmail}
-                    onChange={e => setSettingsForm({ ...settingsForm, supportEmail: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Office Location Address</Label>
-                  <textarea
-                    placeholder="e.g. 100 Main Street, Suite 500, New York, NY"
-                    rows={3}
-                    className="w-full p-4 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800 outline-none resize-none transition-all focus:border-primary/20"
-                    value={settingsForm.officeAddress}
-                    onChange={e => setSettingsForm({ ...settingsForm, officeAddress: e.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <Button
-                type="submit"
-                className="w-full md:w-auto h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] px-10 shadow-xl active:scale-95 transition-all md:ml-auto"
-                disabled={loading}
-              >
                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'SAVE SUPPORT SETTINGS'}
               </Button>
             </div>
@@ -1512,21 +1386,21 @@ export function AdminDashboard() {
     <div className="pt-24 pb-12 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-4 md:space-y-0 pt-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-3 md:space-y-0 pt-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Admin Control Panel</h1>
-            <p className="text-slate-500 font-medium mt-1">Platform operations — caregiver management, bookings, and service quality.</p>
+            <h1 className="text-3xl md:text-3xl font-bold text-slate-900 tracking-tight">Admin Control Panel</h1>
+            <p className="text-slate-500 font-medium mt-1 text-sm md:text-base">Platform operations — caregiver management, bookings, and service quality.</p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <Button 
               onClick={handleExportReports}
               variant="outline" 
-              className="rounded-2xl h-14 px-6 border-slate-200 font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+              className="rounded-2xl h-12 sm:h-14 px-4 sm:px-6 border-slate-200 font-bold text-xs sm:text-sm text-slate-700 shadow-sm hover:bg-slate-50 whitespace-nowrap"
             >
-              <Download className="mr-2 h-4 w-4" /> EXPORT REPORTS
+              <Download className="mr-2 h-4 w-4" /> EXPORT
             </Button>
-            <Button className="rounded-2xl h-14 px-8 bg-slate-950 hover:bg-black text-white font-bold shadow-xl active:scale-95 transition-all" onClick={() => setIsAdminPanelOpen(true)}>
-              <Settings className="mr-2 h-4 w-4" /> Management Center
+            <Button className="rounded-2xl h-12 sm:h-14 px-4 sm:px-8 bg-slate-950 hover:bg-black text-white font-bold text-xs sm:text-sm shadow-xl active:scale-95 transition-all whitespace-nowrap" onClick={() => setIsAdminPanelOpen(true)}>
+              <Settings className="mr-2 h-4 w-4" /> CENTER
             </Button>
           </div>
         </div>
@@ -1707,33 +1581,21 @@ export function AdminDashboard() {
                 ></textarea>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="srvPrice" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Price Range *</Label>
-                  <Input
-                    id="srvPrice"
-                    placeholder="e.g. Standard Rates"
-                    className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800"
-                    value={serviceForm.priceRange}
-                    onChange={e => setServiceForm({ ...serviceForm, priceRange: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="srvIcon" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Service Icon</Label>
-                  <select
-                    id="srvIcon"
-                    className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none px-3"
-                    value={serviceForm.icon}
-                    onChange={e => setServiceForm({ ...serviceForm, icon: e.target.value })}
-                  >
-                    <option value="Heart">Heart</option>
-                    <option value="Activity">Activity</option>
-                    <option value="UserPlus">UserPlus</option>
-                    <option value="Home">Home</option>
-                    <option value="Users">Users</option>
-                    <option value="Calendar">Calendar</option>
-                  </select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="srvIcon" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Service Icon</Label>
+                <select
+                  id="srvIcon"
+                  className="h-14 w-full bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs uppercase tracking-wider text-slate-800 outline-none px-3"
+                  value={serviceForm.icon}
+                  onChange={e => setServiceForm({ ...serviceForm, icon: e.target.value })}
+                >
+                  <option value="Heart">Heart</option>
+                  <option value="Activity">Activity</option>
+                  <option value="UserPlus">UserPlus</option>
+                  <option value="Home">Home</option>
+                  <option value="Users">Users</option>
+                  <option value="Calendar">Calendar</option>
+                </select>
               </div>
 
               <div className="space-y-2">
@@ -1808,14 +1670,10 @@ export function AdminDashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-slate-50 p-4 rounded-2xl text-center border border-slate-100">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Experience</p>
                 <p className="text-lg font-black text-slate-900 mt-1">{selectedCaregiverForDetails.experienceYears} Years</p>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-2xl text-center border border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hourly Rate</p>
-                <p className="text-lg font-black text-slate-900 mt-1">${selectedCaregiverForDetails.hourlyRate}/hr</p>
               </div>
               <div className="bg-slate-50 p-4 rounded-2xl text-center border border-slate-100">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">System Rating</p>
@@ -1843,6 +1701,45 @@ export function AdminDashboard() {
                       </Badge>
                     );
                   })()}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2">Service Cities</h4>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {selectedCaregiverForDetails.cities && selectedCaregiverForDetails.cities.length > 0 ? (
+                    selectedCaregiverForDetails.cities.map((city: string, index: number) => (
+                      <Badge key={index} variant="secondary" className="rounded-xl px-3 py-1 font-bold text-[10px] text-slate-700 bg-emerald-50 border border-emerald-100 text-emerald-700 uppercase tracking-wide flex items-center gap-1">
+                        {city}
+                        <button 
+                          onClick={() => handleRemoveCity(city)}
+                          className="ml-1 hover:text-rose-600 transition-colors"
+                        >
+                          <X size={10} />
+                        </button>
+                      </Badge>
+                    ))
+                  ) : (
+                    <Badge variant="secondary" className="rounded-xl px-3 py-1 font-bold text-[10px] text-slate-400 bg-slate-100 border-none uppercase tracking-wide">
+                      No cities assigned
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add city (e.g., New York)"
+                    value={newCityInput}
+                    onChange={(e) => setNewCityInput(e.target.value)}
+                    className="h-10 text-xs font-bold"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddCity()}
+                  />
+                  <Button
+                    onClick={handleAddCity}
+                    disabled={!newCityInput.trim() || loading}
+                    className="h-10 px-4 bg-primary hover:bg-blue-600 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl"
+                  >
+                    Add
+                  </Button>
                 </div>
               </div>
 
@@ -1979,10 +1876,10 @@ export function AdminDashboard() {
       {/* Admin Panel / Management Center slide-over drawer */}
       {isAdminPanelOpen && (
         <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex justify-end transition-opacity duration-300">
-          <div className="w-full max-w-[1100px] h-full bg-slate-50 shadow-2xl flex flex-row overflow-hidden animate-slide-in-right relative">
+          <div className="w-full h-full md:max-w-[1100px] bg-slate-50 shadow-2xl flex flex-col md:flex-row overflow-hidden animate-slide-in-right relative">
             
-            {/* Left Navigation Sidebar */}
-            <div className="w-64 md:w-80 bg-white border-r border-slate-100 flex flex-col h-full shrink-0">
+            {/* Left Navigation Sidebar - Hidden on Mobile */}
+            <div className="hidden md:flex md:w-64 lg:w-80 bg-white border-r border-slate-100 flex-col h-full shrink-0">
               <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                 <div>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">Management Center</h2>
@@ -2002,7 +1899,6 @@ export function AdminDashboard() {
                     items: [
                       { label: 'Care Notes', value: 'carenotes', icon: FileText },
                       { label: 'Reviews', value: 'reviews', icon: Star },
-                      { label: 'Complaints', value: 'complaints', icon: AlertCircle },
                     ]
                   },
                   {
@@ -2060,30 +1956,63 @@ export function AdminDashboard() {
 
             {/* Right Content Workspace */}
             <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
-              <div className="p-6 bg-white border-b border-slate-100 flex justify-between items-center z-10 shadow-sm shrink-0">
-                <div>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">
+              {/* Mobile Tab Navigation */}
+              <div className="md:hidden bg-white border-b border-slate-100 overflow-x-auto">
+                <div className="flex p-2 gap-1.5 min-w-min px-3">
+                  {[
+                    { label: 'Services', value: 'services', icon: Activity },
+                    { label: 'Care Notes', value: 'carenotes', icon: FileText },
+                    { label: 'Reviews', value: 'reviews', icon: Star },
+                    { label: 'Complaints', value: 'complaints', icon: AlertCircle },
+                    { label: 'Inquiries', value: 'inquiries', icon: Search },
+                    { label: 'Escalations', value: 'escalations', icon: TrendingUp },
+                    { label: 'Support', value: 'support_info', icon: Clock },
+                  ].map((item) => {
+                    const isActive = activeAdminPanelTab === item.value;
+                    const IconComponent = item.icon;
+                    return (
+                      <button
+                        key={item.value}
+                        onClick={() => setActiveAdminPanelTab(item.value)}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all whitespace-nowrap shrink-0 ${
+                          isActive 
+                            ? 'bg-slate-900 text-white' 
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                        title={item.label}
+                      >
+                        <IconComponent size={14} />
+                        <span className="hidden sm:inline">{item.label.split(' ')[0]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Header */}
+              <div className="p-3 sm:p-4 md:p-6 bg-white border-b border-slate-100 flex justify-between items-start md:items-center z-10 shadow-sm shrink-0 gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight uppercase truncate">
                     {activeAdminPanelTab === 'support_info' ? 'Support Information' : activeAdminPanelTab}
                   </h2>
-                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                  <p className="text-[9px] md:text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1 hidden sm:block">
                     {activeAdminPanelTab === 'services' && 'Configure and manage care services.'}
                     {activeAdminPanelTab === 'carenotes' && 'Monitor visits and wellness logs.'}
                     {activeAdminPanelTab === 'reviews' && 'Moderate customer review details.'}
                     {activeAdminPanelTab === 'complaints' && 'Resolve general complaints and disputes.'}
                     {activeAdminPanelTab === 'inquiries' && 'Reply to FAQs and customer questions.'}
                     {activeAdminPanelTab === 'escalations' && 'Handle critical dispute resolutions.'}
-                    {activeAdminPanelTab === 'settings' && 'Customize global landing page settings.'}
-                    {activeAdminPanelTab === 'support_info' && 'Update support hotline, emails, and address.'}
+                    {activeAdminPanelTab === 'support_info' && 'Update support hotline, emails, address, and social links.'}
                   </p>
                 </div>
                 <button 
                   onClick={() => setIsAdminPanelOpen(false)}
-                  className="w-10 h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors border border-slate-100"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors border border-slate-100 flex-shrink-0"
                 >
-                  <X size={20} />
+                  <X size={18} className="sm:w-5 sm:h-5" />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-8">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
                 {(() => {
                   switch (activeAdminPanelTab) {
                     case 'services':
@@ -2098,14 +2027,23 @@ export function AdminDashboard() {
                       return renderInquiriesContent();
                     case 'escalations':
                       return renderEscalationsContent();
-                    case 'settings':
-                      return renderSettingsContent();
                     case 'support_info':
                       return renderSupportInfoContent();
                     default:
                       return renderServicesContent();
                   }
                 })()}
+              </div>
+              
+              {/* Mobile Close Button */}
+              <div className="md:hidden p-4 border-t border-slate-100 bg-white">
+                <Button 
+                  variant="outline" 
+                  className="w-full h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-rose-600 border-rose-100 bg-rose-50/50 hover:bg-rose-50"
+                  onClick={() => setIsAdminPanelOpen(false)}
+                >
+                  Close Workspace
+                </Button>
               </div>
             </div>
 

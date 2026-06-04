@@ -26,7 +26,8 @@ import {
   Play,
   Bell,
   Send,
-  X
+  X,
+  Clipboard
 } from 'lucide-react';
 import { api } from '@/src/api';
 import { useAuthStore } from '../store';
@@ -95,7 +96,7 @@ export function HomePage() {
     api.get('/reviews/public')
       .then(res => setPublicReviews(res.data))
       .catch(err => console.error('Failed to fetch public reviews', err));
-    fetchCaregivers();
+    fetchCaregivers(true);
     fetchSettings();
   }, []);
 
@@ -245,30 +246,21 @@ export function HomePage() {
               </Badge>
               
               <h1 className="text-5xl lg:text-[80px] font-black text-slate-950 mb-6 leading-[0.8] tracking-[-0.06em]">
-                {settings?.heroTitle || "Compassionate Elderly Care at Home"}
+                Care24
               </h1>
               
               <p className="text-lg lg:text-xl text-slate-800 mb-8 max-w-lg leading-relaxed font-medium">
-                {settings?.heroSubtitle || "Connect with verified caregivers, nurses, physiotherapists, and attendants who provide safe, reliable, and compassionate home healthcare services for your loved ones."}
+                Compassionate Home Healthcare for Every Family
               </p>
               
-              <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-16">
-                <Button className="bg-primary hover:bg-blue-600 text-white rounded-[20px] px-10 h-16 font-black text-xs uppercase tracking-widest shadow-[0_20px_40px_rgba(37,99,235,0.3)] active:scale-95 transition-all w-full sm:w-auto" render={<Link to="/signup" />} nativeButton={false}>
-                  {settings?.heroPrimaryCTA || "Book a Service"} <ArrowRight className="ml-3 h-5 w-5" />
-                </Button>
-                <Button variant="outline" className="rounded-[20px] px-10 h-16 font-black text-xs uppercase tracking-widest border-slate-200 text-slate-600 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition-all w-full sm:w-auto" render={<Link to="/services" />} nativeButton={false}>
-                  {settings?.heroSecondaryCTA || "Explore Services"} <ArrowRight className="ml-3 h-5 w-5" />
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap gap-x-12 gap-y-6">
+              <div className="flex flex-wrap gap-x-12 gap-y-6 mb-16">
                  <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-blue-50 text-primary flex items-center justify-center shadow-inner">
-                       <UserPlus size={20} />
+                       <ShieldCheck size={20} />
                     </div>
                     <div>
-                       <p className="text-sm font-black text-slate-950 uppercase tracking-tight">Verified Caregivers</p>
-                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Background Checked</p>
+                       <p className="text-sm font-black text-slate-950 uppercase tracking-tight">✓ Verified Caregivers</p>
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Background-checked healthcare professionals you can trust</p>
                     </div>
                  </div>
                  <div className="flex items-center gap-4">
@@ -276,17 +268,35 @@ export function HomePage() {
                        <Clock size={20} />
                     </div>
                     <div>
-                       <p className="text-sm font-black text-slate-950 uppercase tracking-tight">24/7 Support</p>
-                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Always Available</p>
+                       <p className="text-sm font-black text-slate-950 uppercase tracking-tight">✓ 24/7 Support</p>
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dedicated assistance whenever you need help</p>
                     </div>
                  </div>
                  <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-blue-50 text-primary flex items-center justify-center shadow-inner">
-                       <Shield size={20} />
+                       <Heart size={20} />
                     </div>
                     <div>
-                       <p className="text-sm font-black text-slate-950 uppercase tracking-tight">Safe & Secure</p>
-                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your Family, Our Priority</p>
+                       <p className="text-sm font-black text-slate-950 uppercase tracking-tight">✓ Compassionate Care</p>
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Patient-centered care delivered with empathy and respect</p>
+                    </div>
+                 </div>
+                 <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 text-primary flex items-center justify-center shadow-inner">
+                       <Lock size={20} />
+                    </div>
+                    <div>
+                       <p className="text-sm font-black text-slate-950 uppercase tracking-tight">✓ Safe & Secure</p>
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Protected personal information and reliable service standards</p>
+                    </div>
+                 </div>
+                 <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 text-primary flex items-center justify-center shadow-inner">
+                       <Clipboard size={20} />
+                    </div>
+                    <div>
+                       <p className="text-sm font-black text-slate-950 uppercase tracking-tight">✓ Personalized Care Plans</p>
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Care solutions tailored to individual health and support needs</p>
                     </div>
                  </div>
               </div>
@@ -334,10 +344,10 @@ export function HomePage() {
 
               {/* Card 2 — Verified Caregivers */}
               <div className="bg-white/95 backdrop-blur-2xl p-6 rounded-[32px] shadow-4xl border border-white/50 w-72 mb-8 hover:-translate-y-2 transition-transform duration-500 group">
-                 <div className="flex justify-between items-start mb-4">
+<div className="flex justify-between items-start mb-4">
                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verified Caregivers</p>
                    <span className="bg-blue-50 text-primary border border-blue-100 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">
-                     Trusted Professionals
+                     Background-checked healthcare professionals
                    </span>
                  </div>
                  {verifiedCgCount > 0 ? (
@@ -345,8 +355,8 @@ export function HomePage() {
                      <h4 className="text-xl font-black text-slate-950 tracking-tight mb-1">
                        {verifiedCgCount} Active Caregivers
                      </h4>
-                     <p className="text-xs text-slate-500 font-bold mb-2">
-                       Background Checked
+<p className="text-xs text-slate-500 font-bold mb-2">
+                       Background-checked healthcare professionals
                      </p>
                      <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                        <ShieldCheck size={12} className="text-slate-400" />
@@ -355,11 +365,11 @@ export function HomePage() {
                    </>
                  ) : (
                    <>
-                     <h4 className="text-xl font-black text-slate-950 tracking-tight mb-2">
-                       {settings?.caregiverTrustTitle || "Verified Caregivers"}
+<h4 className="text-xl font-black text-slate-950 tracking-tight mb-2">
+                       Verified Caregivers
                      </h4>
                      <p className="text-xs text-slate-500 font-bold mb-2">
-                       {settings?.caregiverTrustDescription || "Background Checked Professionals"}
+                       Background-checked healthcare professionals
                      </p>
                      <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                        <ShieldCheck size={12} className="text-slate-400" />
@@ -385,9 +395,19 @@ export function HomePage() {
                      <p className="text-xs text-slate-500 font-bold mb-2">
                        Multi-City Service Coverage
                      </p>
-                     <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                     <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1 mb-2">
                        <Clock size={12} className="text-slate-400 animate-pulse" />
                        <span>Compassionate Care Network</span>
+                     </div>
+                     <div className="flex flex-wrap gap-1 mt-2">
+                       {uniqueCities.slice(0, 4).map((city, idx) => (
+                         <span key={idx} className="text-[8px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
+                           {city}
+                         </span>
+                       ))}
+                       {uniqueCities.length > 4 && (
+                         <span className="text-[8px] text-slate-400 font-bold">+{uniqueCities.length - 4} more</span>
+                       )}
                      </div>
                    </>
                  ) : (

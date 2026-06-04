@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'motion/react';
-import { Heart, Mail, Lock, ArrowRight, User, ShieldCheck, CheckCircle2, UserPlus } from 'lucide-react';
+import { Heart, Mail, Lock, ArrowRight, User, ShieldCheck, CheckCircle2, UserPlus, Eye, EyeOff, Phone } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,11 +13,12 @@ import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/api';
 import { toast } from 'sonner';
-import { toProperCase, normalizeEmail } from '@/src/utils/normalize';
+import { toProperCase, normalizeEmail, cleanPhone } from '@/src/utils/normalize';
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
+  phone: z.string().min(7, { message: "Phone number must be at least 7 digits" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
   role: z.enum(["user", "caregiver"] as const, { message: "Please select a role" }),
   confirmPassword: z.string()
@@ -32,6 +33,8 @@ export function SignupPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated, role } = useAuthStore();
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -49,11 +52,12 @@ export function SignupPage() {
       const response = await api.post('/auth/signup', {
         name: toProperCase(data.name.trim()),
         email: data.email.toLowerCase().trim(),
+        phone: data.phone.trim(),
         password: data.password,
         role: data.role,
       });
 
-      const { _id, name, email, role: userRoleString, token } = response.data;
+      const { _id, name, email, phone, role: userRoleString, token } = response.data;
       const uppercaseRole = userRoleString.toUpperCase() as any;
 
       login({
@@ -146,16 +150,41 @@ export function SignupPage() {
               </div>
 
               <div className="space-y-3">
+                <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 pl-2">Phone Number</Label>
+                <div className="relative">
+                  <Phone className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
+                  <Input 
+                    id="phone" 
+                    placeholder="+15550192"
+                    className="pl-14 sm:pl-16 pr-6 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 text-ellipsis overflow-hidden whitespace-nowrap" 
+                    {...register('phone', {
+                      onBlur: (e) => {
+                        setValue('phone', cleanPhone(e.target.value));
+                      }
+                    })}
+                  />
+                </div>
+                {errors.phone && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.phone.message}</p>}
+              </div>
+
+              <div className="space-y-3">
                 <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 pl-2">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
                   <Input 
                     id="password" 
-                    type="password" 
+                    type={showPassword ? 'text' : 'password'} 
                     placeholder="••••••••"
-                    className="pl-14 sm:pl-16 pr-6 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 text-ellipsis overflow-hidden whitespace-nowrap" 
+                    className="pl-14 sm:pl-16 pr-16 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 text-ellipsis overflow-hidden whitespace-nowrap" 
                     {...register('password')}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
                 {errors.password && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.password.message}</p>}
               </div>
@@ -166,11 +195,18 @@ export function SignupPage() {
                   <Lock className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300" />
                   <Input 
                     id="confirmPassword" 
-                    type="password" 
+                    type={showConfirmPassword ? 'text' : 'password'} 
                     placeholder="••••••••"
-                    className="pl-14 sm:pl-16 pr-6 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 text-ellipsis overflow-hidden whitespace-nowrap" 
+                    className="pl-14 sm:pl-16 pr-16 h-20 w-full bg-slate-50 border-transparent focus:bg-white transition-all font-black text-[10px] sm:text-xs tracking-wider sm:tracking-widest rounded-3xl border-2 focus:border-primary/20 focus-visible:ring-0 text-ellipsis overflow-hidden whitespace-nowrap" 
                     {...register('confirmPassword')}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
                 {errors.confirmPassword && <p className="text-[10px] text-destructive font-black uppercase tracking-widest pl-2 pt-1">{errors.confirmPassword.message}</p>}
               </div>

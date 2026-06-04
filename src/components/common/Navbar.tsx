@@ -44,11 +44,14 @@ export function Navbar() {
            </Button>
         ) : (
            <Button 
-              className="w-full h-16 rounded-[24px] bg-slate-950 text-white font-black text-sm uppercase tracking-widest shadow-[0_20px_40px_rgba(0,0,0,0.4)] border-none active:scale-[0.98] transition-all"
-              render={<Link to="/dashboard" />}
-              nativeButton={false}
+              className="w-full h-16 rounded-[24px] bg-red-600 text-white font-black text-sm uppercase tracking-widest shadow-[0_20px_40px_rgba(220,38,38,0.4)] border-none active:scale-[0.98] transition-all hover:bg-red-700"
+              onClick={() => {
+                logout();
+                resetStore();
+              }}
+              nativeButton={true}
            >
-              Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+              Logout <ArrowRight className="ml-2 h-4 w-4" />
            </Button>
         )}
       </div>
@@ -184,12 +187,8 @@ export function Navbar() {
                                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{user?.role}</p>
                                </div>
                             </div>
-                            <Button className="w-full h-16 rounded-2xl font-bold" render={<Link to="/dashboard" />} nativeButton={false}>
-                               GO TO DASHBOARD
-                            </Button>
                             <Button 
-                              variant="outline" 
-                              className="w-full h-16 rounded-2xl border-destructive/20 text-destructive hover:bg-destructive/10 font-bold uppercase tracking-widest text-xs" 
+                              className="w-full h-16 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold uppercase tracking-widest text-xs transition-all" 
                               onClick={() => {
                                 logout();
                                 resetStore();

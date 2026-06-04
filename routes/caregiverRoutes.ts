@@ -202,4 +202,26 @@ router.put("/:id/availability", protect, authorize("admin"), async (req: any, re
   }
 });
 
+// @desc    Admin update caregiver cities
+// @route   PUT /api/caregivers/:id
+// @access  Private/Admin
+router.put("/:id", protect, authorize("admin"), async (req: any, res) => {
+  try {
+    const { cities } = req.body;
+    const caregiver = await Caregiver.findByIdAndUpdate(
+      req.params.id,
+      { cities: cities || [] },
+      { new: true }
+    ).populate("user", "name email");
+
+    if (caregiver) {
+      res.json(caregiver);
+    } else {
+      res.status(404).json({ message: "Caregiver not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: (error as Error).message });
+  }
+});
+
 export default router;

@@ -117,24 +117,9 @@ export interface Complaint {
 export interface SystemSettings {
   _id?: string;
   heroTitle?: string;
-  heroSubtitle?: string;
-  heroPrimaryCTA?: string;
-  heroSecondaryCTA?: string;
-  satisfactionTitle?: string;
-  satisfactionDescription?: string;
-  caregiverTrustTitle?: string;
-  caregiverTrustDescription?: string;
-  serviceCoverageTitle?: string;
-  serviceCoverageDescription?: string;
-  companyName?: string;
-  footerDescription?: string;
   supportEmail: string;
   supportPhone: string;
-  whatsappNumber?: string;
-  supportHours?: string;
   officeAddress: string;
-  emergencyContact?: string;
-  supportedCities: string[];
   facebookUrl?: string;
   instagramUrl?: string;
   linkedinUrl?: string;

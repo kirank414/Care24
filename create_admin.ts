@@ -11,6 +11,7 @@ async function createAdmin() {
     const existing = await User.findOne({ email: "admin@care24.com" });
     if (existing) {
       existing.password = "password123";
+      existing.phone = existing.phone || "+1555000000";
       await existing.save();
       console.log("Admin user password reset to password123 successfully!");
     } else {
@@ -18,6 +19,7 @@ async function createAdmin() {
         name: "System Admin",
         email: "admin@care24.com",
         password: "password123", // Will be automatically encrypted by pre-save hook
+        phone: "+1555000000",
         role: "admin"
       });
       console.log("Admin user registered successfully!");

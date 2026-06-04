@@ -82,7 +82,17 @@ export function BookCarePage() {
       return;
     }
 
-    if (new Date(startDate) > new Date(endDate)) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (start < today) {
+      toast.error('Start date cannot be in the past.');
+      return;
+    }
+
+    if (start > end) {
       toast.error('End date must be after or equal to the start date.');
       return;
     }

@@ -13,8 +13,6 @@ import {
   Bell,
   Activity,
   ClipboardList,
-  Headphones,
-  User,
   Check,
   CheckCircle,
   Plus,
@@ -58,6 +56,7 @@ export function CaregiverDashboard() {
   const [selectedBookingId, setSelectedBookingId] = useState('');
   const [notifOpen, setNotifOpen] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<'week' | 'month' | 'all'>('all');
+  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
 
 
   useEffect(() => {
@@ -84,6 +83,7 @@ export function CaregiverDashboard() {
   const activeAssignments = bookings.filter((b: any) => ['pending','confirmed','active'].includes(b.status)).length;
   const pendingRequests = bookings.filter((b: any) => b.status === 'pending').length;
   const totalNotes = careNotes?.length || 0;
+  const activeBooking = bookings.find((b: any) => b.status === 'active');
 
   const getFilteredHistory = () => {
     const completed = bookings.filter((b: any) => b.status === 'completed');
@@ -114,13 +114,60 @@ export function CaregiverDashboard() {
     return b.durationType === 'hourly' ? 'Hourly' : '—';
   };
 
+  const getSessionTasks = () => {
+    if (!activeBooking) return [];
+    
+    const bookingCareNotes = careNotes.filter((n: any) => n.bookingId === activeBooking._id);
+    
+    const tasks = [
+      { 
+        id: 'check-in',
+        title: 'Visit Check-In', 
+        description: 'Confirm arrival and begin session log',
+        completed: bookingCareNotes.length > 0
+      },
+      { 
+        id: 'care-notes',
+        title: 'Daily Care Notes', 
+        description: 'Record patient observations and vitals',
+        completed: bookingCareNotes.some((n: any) => n.note && n.note.length > 0)
+      },
+      { 
+        id: 'mobility',
+        title: 'Mobility Assistance Session', 
+        description: '20 mins supported movement drill',
+        completed: completedTasks.has('mobility')
+      },
+      { 
+        id: 'wellness',
+        title: 'Wellness Observation', 
+        description: 'Monitor comfort and general well-being',
+        completed: completedTasks.has('wellness')
+      },
+    ];
+    
+    return tasks;
+  };
+
+  const toggleTask = (taskId: string) => {
+    setCompletedTasks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="pt-24 pb-24 bg-[#F9FAFB] min-h-screen">
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.02),transparent_50%)]"></div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-8 pt-10">
-          <div className="flex items-center space-x-8">
+          <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-8">
             <div className="relative group">
                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[32px] sm:rounded-[40px] bg-white shadow-2xl p-2 border border-slate-100 shrink-0 overflow-hidden">
                     {caregiver?.imageUrl ? (
@@ -161,8 +208,8 @@ export function CaregiverDashboard() {
             </div>
           </div>
           
-          <div className="flex items-center gap-4 pb-2">
-             <div className="text-right hidden md:block px-8 py-2 border-r border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-2 w-full sm:w-auto">
+             <div className="text-right hidden md:block px-6 py-2 border-r border-slate-200">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Earnings</p>
                 <p className="text-2xl font-bold text-slate-900 leading-none">${revenueData?.totalEarnings?.toLocaleString() || '0'}</p>
              </div>
@@ -183,7 +230,7 @@ export function CaregiverDashboard() {
                </Button>
                <NotificationCenter open={notifOpen} onClose={() => setNotifOpen(false)} />
              </div>
-             <Button className="h-14 rounded-2xl bg-primary text-white font-bold px-8 shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all" onClick={() => setIsNoteModalOpen(true)}>
+             <Button className="w-full sm:w-auto h-14 rounded-2xl bg-primary text-white font-bold px-6 sm:px-8 shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all" onClick={() => setIsNoteModalOpen(true)}>
                 <Plus size={20} className="mr-2" /> Log Care Note
              </Button>
           </div>
@@ -222,10 +269,10 @@ export function CaregiverDashboard() {
             { label: 'Care Notes Logged', val: totalNotes.toString(), pct: 'Submitted', icon: ClipboardList, color: 'text-amber-500', bg: 'bg-amber-50' },
           ].map((stat, i) => (
              <Card key={i} className="enterprise-card border-none shadow-xl shadow-slate-200/50 rounded-[32px] p-2 hover:translate-y-[-4px] transition-all">
-                <CardContent className="p-8">
-                   <div className="flex justify-between items-start mb-10">
+                <CardContent className="p-6 sm:p-8">
+                   <div className="flex justify-between items-start mb-8">
                       <div className={`w-14 h-14 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center shadow-inner`}>
-                         <stat.icon size={28} />
+                         <stat.icon size={26} />
                       </div>
                       <Badge variant="outline" className="bg-white border-slate-100 text-[10px] font-bold text-slate-400 px-3 py-1">{stat.pct}</Badge>
                    </div>
@@ -308,7 +355,7 @@ export function CaregiverDashboard() {
                                     {req.service?.title || 'Care Service'}
                                   </Badge>
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2">
                                   <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
                                     <Calendar size={14} className="text-slate-300 shrink-0" />
                                     <span>{reqDate}</span>
@@ -375,8 +422,8 @@ export function CaregiverDashboard() {
                      transition={{ delay: i * 0.1 }}
                      className={`p-1 rounded-[32px] border-2 transition-all ${shift.status === 'active' ? 'bg-white border-blue-100 shadow-2xl shadow-blue-500/5' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}
                    >
-                     <div className="bg-white rounded-[30px] p-8 flex flex-col md:flex-row items-stretch gap-10">
-                        <div className="md:w-32 rounded-3xl bg-slate-950 text-white p-6 flex flex-col justify-center text-center shrink-0">
+                     <div className="bg-white rounded-[30px] p-6 sm:p-8 flex flex-col md:flex-row items-stretch gap-8">
+                        <div className="md:w-32 rounded-3xl bg-slate-950 text-white p-5 sm:p-6 flex flex-col justify-center text-center shrink-0">
                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Status</p>
                            <p className="text-base font-black uppercase text-primary">{shift.status}</p>
                            <p className="text-[9px] font-bold text-slate-400 uppercase mt-2">${shift.totalAmount}</p>
@@ -461,7 +508,7 @@ export function CaregiverDashboard() {
                              )}
                            </div>
                            
-                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 shrink-0 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
+                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
                              <div className="text-center md:text-left">
                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">BP</p>
                                <p className="font-bold text-slate-900 text-xs">{bpVal}</p>
@@ -497,17 +544,17 @@ export function CaregiverDashboard() {
               <TabsContent value="earnings">
                  <div className="space-y-8">
                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                     <div className="p-8 rounded-[32px] bg-white border border-slate-100 shadow-sm">
+                     <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-sm">
                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Earnings</p>
                        <p className="text-3xl font-bold text-slate-900">${revenueData?.totalEarnings?.toLocaleString() || '0'}</p>
                        <p className="text-xs text-slate-400 font-medium mt-1">All completed visits</p>
                      </div>
-                     <div className="p-8 rounded-[32px] bg-white border border-slate-100 shadow-sm">
+                     <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-sm">
                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Weekly Earnings</p>
                        <p className="text-3xl font-bold text-emerald-600">${weeklyRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                        <p className="text-xs text-slate-400 font-medium mt-1">This week</p>
                      </div>
-                     <div className="p-8 rounded-[32px] bg-white border border-slate-100 shadow-sm">
+                     <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-sm">
                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Active Assignments</p>
                        <p className="text-3xl font-bold text-blue-600">{activeAssignments}</p>
                        <p className="text-xs text-slate-400 font-medium mt-1">Pending, confirmed or active</p>
@@ -515,7 +562,7 @@ export function CaregiverDashboard() {
                    </div>
 
                     <Card className="border-none shadow-xl rounded-[40px] overflow-hidden bg-white">
-                      <CardHeader className="p-8 pb-5">
+                      <CardHeader className="p-6 pb-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div>
                             <CardTitle className="text-lg font-bold text-slate-900">Work History</CardTitle>
@@ -548,7 +595,7 @@ export function CaregiverDashboard() {
                           )}
                         </div>
                       </CardHeader>
-                      <CardContent className="p-8 pt-0">
+                      <CardContent className="p-4 sm:p-6 pt-0">
                         {getFilteredHistory().length === 0 ? (
                           <div className="flex flex-col items-center justify-center py-14 text-center">
                             <div className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center mb-3">
@@ -621,63 +668,46 @@ export function CaregiverDashboard() {
 
           <div className="lg:col-span-4 space-y-8">
              <Card className="enterprise-card border-none shadow-xl rounded-[40px] bg-white overflow-hidden p-2">
-                <CardHeader className="p-8 pb-4">
+                <CardHeader className="p-6 pb-4">
                    <div className="flex items-center justify-between">
                      <CardTitle className="text-lg font-bold text-slate-900">Current Session Tasks</CardTitle>
-                     <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Active Visit</p>
+                     <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                       {activeBooking ? 'Active Visit' : 'No Active Visit'}
+                     </p>
                    </div>
                 </CardHeader>
-                <CardContent className="p-8 pt-0">
-                   <div className="space-y-6">
-                       {[
-                         { t: 'Visit Check-In', d: 'Confirm arrival and begin session log', s: 'completed' },
-                         { t: 'Daily Care Notes', d: 'Record patient observations and vitals', s: 'pending' },
-                         { t: 'Mobility Assistance Session', d: '20 mins supported movement drill', s: 'pending' },
-                         { t: 'Wellness Observation', d: 'Monitor comfort and general well-being', s: 'pending' },
-                       ].map((task, i) => (
-                        <div key={i} className="flex items-start gap-4">
-                           <div className={`mt-1 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 ${task.s === 'completed' ? 'bg-primary border-primary text-white' : 'border-slate-200'}`}>
-                              {task.s === 'completed' && <Check size={12} strokeWidth={4} />}
+                <CardContent className="p-6 pt-0">
+                   {!activeBooking ? (
+                     <div className="flex flex-col items-center justify-center py-12 text-center">
+                       <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3">
+                         <Activity size={20} className="text-slate-300" />
+                       </div>
+                       <p className="font-bold text-slate-400 text-sm">No Active Session</p>
+                       <p className="text-xs text-slate-300 mt-1 max-w-xs">Start an active assignment to see session tasks</p>
+                     </div>
+                   ) : (
+                     <div className="space-y-6">
+                       {getSessionTasks().map((task) => (
+                        <div key={task.id} className="flex items-start gap-4 cursor-pointer group" onClick={() => toggleTask(task.id)}>
+                           <div className={`mt-1 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                             task.completed 
+                               ? 'bg-primary border-primary text-white' 
+                               : 'border-slate-200 group-hover:border-primary/50'
+                           }`}>
+                              {task.completed && <Check size={12} strokeWidth={4} />}
                            </div>
                            <div>
-                              <h5 className={`font-bold text-sm ${task.s === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.t}</h5>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{task.d}</p>
+                              <h5 className={`font-bold text-sm transition-all ${
+                                task.completed ? 'text-slate-400 line-through' : 'text-slate-900 group-hover:text-primary'
+                              }`}>{task.title}</h5>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{task.description}</p>
                            </div>
                         </div>
                       ))}
                    </div>
+                   )}
                 </CardContent>
              </Card>
-
-             {/* Care Support Assistance */}
-             <div className="p-8 rounded-[40px] bg-blue-50/60 border border-blue-100 shadow-sm">
-                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-6">Care Support Assistance</p>
-                <div className="flex justify-center mb-8">
-                   <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-blue-600 border border-blue-100 shadow-lg">
-                      <Headphones size={36} />
-                   </div>
-                </div>
-                <h4 className="text-xl font-bold text-slate-900 mb-2 text-center">Contact Coordinator</h4>
-                <p className="text-sm font-medium text-slate-500 mb-8 leading-relaxed text-center px-2">Contact the care coordination team regarding scheduling issues, booking concerns, caregiver availability updates, or service-related questions.</p>
-                <Button 
-                   onClick={async () => {
-                     try {
-                       await submitInquiry({
-                         question: `Support call requested by caregiver: ${caregiver?.name || "Unknown Caregiver"}`,
-                         email: user?.email || "N/A"
-                       });
-                       const toast = (await import('react-hot-toast')).default;
-                       toast.success('Request sent. A care coordinator will be in touch shortly.');
-                     } catch (err: any) {
-                       const toast = (await import('react-hot-toast')).default;
-                       toast.error('Failed to submit support request: ' + (err.response?.data?.message || err.message));
-                     }
-                   }}
-                   className="w-full h-16 rounded-[24px] bg-slate-900 hover:bg-black text-white font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-                 >
-                    CONTACT COORDINATOR
-                 </Button>
-             </div>
           </div>
         </div>
       </div>

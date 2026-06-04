@@ -22,6 +22,14 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
+    phone: {
+      type: String,
+      required: [true, "Please add a phone number"],
+      match: [
+        /^\+?[\d\s\-()]{7,20}$/,
+        "Please add a valid phone number",
+      ],
+    },
     role: {
       type: String,
       enum: ["user", "caregiver", "admin"],

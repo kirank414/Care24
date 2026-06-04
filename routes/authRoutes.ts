@@ -25,14 +25,22 @@ const generateToken = (id: string) => {
 // @route   POST /api/auth/signup
 // @access  Public
 router.post("/signup", async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, phone, role } = req.body;
 
   try {
-    if (!email || !name) {
-      return res.status(400).json({ message: "Name and email are required" });
+    if (!email || !name || !phone) {
+      return res.status(400).json({ message: "Name, email, and phone are required" });
     }
+
+    // Security: Validate role to prevent admin account creation through public signup
+    const validRoles = ["user", "caregiver"];
+    if (role && !validRoles.includes(role)) {
+      return res.status(400).json({ message: "Invalid role specified" });
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedName = toProperCase(name.trim());
+    const normalizedPhone = phone.trim();
 
     const safeEmail = normalizedEmail.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const userExists = await User.findOne({ email: { $regex: new RegExp(`^${safeEmail}$`, "i") } });
@@ -45,6 +53,7 @@ router.post("/signup", async (req, res) => {
       name: normalizedName,
       email: normalizedEmail,
       password,
+      phone: normalizedPhone,
       role: role || "user",
     });
 
@@ -53,6 +62,7 @@ router.post("/signup", async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         token: generateToken(user._id.toString()),
       });

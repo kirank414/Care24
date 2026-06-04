@@ -32,6 +32,29 @@ router.post("/", protect, async (req: any, res) => {
   try {
     const { patient, caregiver, service, startDate, endDate, durationType, startTime, endTime, totalAmount, notes } = req.body;
 
+    const parsedStartDate = startDate ? new Date(startDate) : null;
+    const parsedEndDate = endDate ? new Date(endDate) : null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (!parsedStartDate || isNaN(parsedStartDate.getTime())) {
+      return res.status(400).json({ message: "Start date is required and must be valid." });
+    }
+
+    if (parsedStartDate < today) {
+      return res.status(400).json({ message: "Start date cannot be in the past." });
+    }
+
+    if (durationType !== "long-term") {
+      if (!parsedEndDate || isNaN(parsedEndDate.getTime())) {
+        return res.status(400).json({ message: "End date is required and must be valid." });
+      }
+
+      if (parsedEndDate < parsedStartDate) {
+        return res.status(400).json({ message: "End date must be the same as or after the start date." });
+      }
+    }
+
     let booking: any = await Booking.create({
       patient,
       caregiver,
