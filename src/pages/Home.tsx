@@ -55,7 +55,6 @@ export function HomePage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = React.useState('booking');
   const [publicReviews, setPublicReviews] = useState<any[]>([]);
-  const [reviewIndex, setReviewIndex] = useState(0);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
   const [inlineQuestion, setInlineQuestion] = useState('');
@@ -182,22 +181,7 @@ export function HomePage() {
 
   const highReviews = publicReviews.filter((r: any) => r.rating >= 4 && r.rating <= 5);
 
-  useEffect(() => {
-    if (highReviews.length > 3) {
-      const interval = setInterval(() => {
-        setReviewIndex(prev => (prev + 1) % highReviews.length);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [highReviews.length]);
-
-  const visibleReviews = highReviews.length >= 3
-    ? highReviews.slice(reviewIndex, reviewIndex + 3).concat(
-        reviewIndex + 3 > highReviews.length 
-          ? highReviews.slice(0, (reviewIndex + 3) - highReviews.length) 
-          : []
-      ).slice(0, 3)
-    : highReviews;
+  const visibleReviews = highReviews.slice(0, 3);
 
   const averageRating = highReviews.length > 0
     ? (highReviews.reduce((acc, r) => acc + r.rating, 0) / highReviews.length).toFixed(1)
