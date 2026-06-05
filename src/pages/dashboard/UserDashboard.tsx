@@ -690,8 +690,8 @@ export function UserDashboard() {
                   <div className="flex flex-col sm:flex-row lg:flex-col items-center gap-6 shrink-0 lg:w-48 text-center sm:text-left lg:text-center">
                     <div className="relative">
                       <div className="w-28 h-28 rounded-[36px] bg-[#dfe5e7] border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center">
-                         {(user as any)?.imageUrl ? (
-                            <img src={(user as any).imageUrl} alt="Patient Avatar" className="w-full h-full object-cover" />
+                        {patient?.imageUrl ? (
+                            <img src={patient.imageUrl} alt="Patient Avatar" className="w-full h-full object-cover" />
                          ) : (
                             <User className="w-full h-full text-white fill-white translate-y-1/4 scale-125" />
                          )}
