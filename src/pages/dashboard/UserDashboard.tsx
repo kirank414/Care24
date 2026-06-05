@@ -1199,17 +1199,21 @@ export function UserDashboard() {
                      {inquiries.map((inq: any, i: number) => (
                        <div key={inq._id || i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-100 transition-colors">
                          <p className="text-xs font-bold text-slate-900 leading-tight">Q: {inq.question}</p>
-                         {inq.status === 'answered' ? (
-                           <div className="mt-2.5 pl-3 border-l-2 border-primary">
-                             <p className="text-[11px] font-semibold text-primary">A: {inq.answer}</p>
-                             <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">Answered by Care Concierge</p>
-                           </div>
-                         ) : (
-                           <div className="mt-2.5 flex items-center gap-1.5 text-[9px] font-bold text-amber-500 uppercase">
-                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                             <span>Pending Response</span>
-                           </div>
-                         )}
+                         {inq.status === 'Resolved' || inq.answer ? (
+                          <div className="mt-2.5 pl-3 border-l-2 border-emerald-500 relative">
+                            <div className="absolute -top-1 right-0 flex items-center gap-1 text-[9px] font-bold text-emerald-500 uppercase">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              <span>Completed</span>
+                            </div>
+                            <p className="text-[11px] font-semibold text-emerald-700 pr-16 leading-relaxed">A: {inq.answer}</p>
+                            <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">Answered by Care Concierge</p>
+                          </div>
+                        ) : (
+                          <div className="mt-2.5 flex items-center gap-1.5 text-[9px] font-bold text-amber-500 uppercase">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span>Pending Response</span>
+                          </div>
+                        )}
                        </div>
                      ))}
                    </div>
