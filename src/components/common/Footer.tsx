@@ -118,40 +118,42 @@ export function Footer() {
           </div>
 
           {/* Contact & Support */}
-          <div>
-            <h4 className="text-white font-black mb-10 uppercase text-[9px] tracking-[0.4em] flex items-center">
-              Contact & Support <div className="ml-4 h-[1px] flex-grow bg-white/10"></div>
-            </h4>
-            <div className="space-y-6">
-              {settings?.officeAddress && (
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
-                  <MapPin size={18} className="text-primary shrink-0 mt-0.5" />
-                  <div>
-                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Office Address</p>
-                     <p className="text-xs font-bold text-slate-300 leading-relaxed">{settings.officeAddress}</p>
+          {(settings?.officeAddress || settings?.supportPhone || settings?.supportEmail) && (
+            <div>
+              <h4 className="text-white font-black mb-10 uppercase text-[9px] tracking-[0.4em] flex items-center">
+                Contact & Support <div className="ml-4 h-[1px] flex-grow bg-white/10"></div>
+              </h4>
+              <div className="space-y-6">
+                {settings?.officeAddress && (
+                  <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all">
+                    <MapPin size={18} className="text-primary shrink-0 mt-0.5" />
+                    <div>
+                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Office Address</p>
+                       <p className="text-xs font-bold text-slate-300 leading-relaxed">{settings.officeAddress}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {settings?.supportPhone && (
-                <a href={`tel:${settings.supportPhone.replace(/[^\d+]/g, '')}`} className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all w-full">
-                  <Phone size={18} className="text-primary shrink-0 mt-0.5" />
-                  <div>
-                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5 group-hover:text-primary/70 transition-colors">Support Phone</p>
-                     <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{settings.supportPhone}</span>
-                  </div>
-                </a>
-              )}
-              {settings?.supportEmail && (
-                <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${settings.supportEmail}`} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all w-full">
-                  <Mail size={18} className="text-primary shrink-0 mt-0.5" />
-                  <div>
-                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5 group-hover:text-primary/70 transition-colors">Support Email</p>
-                     <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{settings.supportEmail}</span>
-                  </div>
-                </a>
-              )}
+                )}
+                {settings?.supportPhone && (
+                  <a href={`tel:${settings.supportPhone.replace(/[^\d+]/g, '')}`} className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all w-full">
+                    <Phone size={18} className="text-primary shrink-0 mt-0.5" />
+                    <div>
+                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5 group-hover:text-primary/70 transition-colors">Support Phone</p>
+                       <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{settings.supportPhone}</span>
+                    </div>
+                  </a>
+                )}
+                {settings?.supportEmail && (
+                  <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${settings.supportEmail}`} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.04] transition-all w-full">
+                    <Mail size={18} className="text-primary shrink-0 mt-0.5" />
+                    <div>
+                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5 group-hover:text-primary/70 transition-colors">Support Email</p>
+                       <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{settings.supportEmail}</span>
+                    </div>
+                  </a>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Legal & Compliance Footer */}
@@ -163,7 +165,9 @@ export function Footer() {
               <div className="flex flex-wrap justify-center gap-10 text-[9px] font-black uppercase tracking-[0.3em]">
                  <Link to="/privacy" className="text-slate-600 hover:text-primary transition-colors">Privacy Policy</Link>
                  <Link to="/terms" className="text-slate-600 hover:text-primary transition-colors">Terms & Conditions</Link>
-                 <Link to="/" className="text-slate-600 hover:text-primary transition-colors">Contact Support</Link>
+                 {(settings?.supportPhone || settings?.supportEmail) && (
+                   <Link to="/" className="text-slate-600 hover:text-primary transition-colors">Contact Support</Link>
+                 )}
               </div>
               <div className="flex items-center gap-8 text-slate-800">
                  <ShieldCheck size={36} className="transition-colors hover:text-primary" />

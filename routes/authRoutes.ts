@@ -111,4 +111,39 @@ router.get("/me", protect, async (req: any, res) => {
   res.json(req.user);
 });
 
+// @desc    Demo-only: Reset Password
+// @route   POST /api/auth/demo-reset-password
+// @access  Public
+// @note    This is for development/demo purposes ONLY. 
+//          Production implementations must require email verification tokens and ownership validation.
+router.post("/demo-reset-password", async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  try {
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: "Email and new password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const safeEmail = normalizedEmail.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    
+    const user: any = await User.findOne({ email: { $regex: new RegExp(`^${safeEmail}$`, "i") } });
+
+    if (!user) {
+      return res.status(404).json({ message: "Account with this email not found" });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: "Password reset successfully (Demo mode)" });
+  } catch (error) {
+    res.status(500).json({ message: (error as Error).message });
+  }
+});
+
 export default router;

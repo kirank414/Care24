@@ -21,6 +21,7 @@ import {
   X,
   FileText,
   Eye,
+  EyeOff,
   Trash2,
   ToggleLeft,
   ToggleRight,
@@ -99,6 +100,43 @@ export function AdminDashboard() {
     supportEmail: '', supportPhone: '', officeAddress: '',
     facebookUrl: '', instagramUrl: '', linkedinUrl: '', twitterUrl: '',
   });
+
+  const [accountForm, setAccountForm] = useState({
+    email: user?.email || '', phone: user?.phone || '', password: '', confirmPassword: ''
+  });
+  const [showAccountPassword, setShowAccountPassword] = useState(false);
+
+  const handleAccountSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (accountForm.password && accountForm.password !== accountForm.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (accountForm.password && accountForm.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    try {
+      const payload: any = {};
+      if (accountForm.email) payload.email = accountForm.email;
+      if (accountForm.phone) payload.phone = accountForm.phone;
+      if (accountForm.password) payload.password = accountForm.password;
+      
+      const res = await api.put('/users/profile', payload);
+      toast.success("Admin profile updated successfully!");
+      // Optionally update user store here or rely on current session
+      useAuthStore.getState().login({
+        id: res.data._id,
+        email: res.data.email,
+        name: res.data.name,
+        role: res.data.role.toUpperCase()
+      }, useAuthStore.getState().token);
+      
+      setAccountForm({ ...accountForm, password: '', confirmPassword: '' });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to update profile');
+    }
+  };
 
   useEffect(() => {
     if (settings) {
@@ -1434,8 +1472,8 @@ export function AdminDashboard() {
         {/* Booking Activity Overview + Daily Bookings and Tab Tables */}
         <Tabs defaultValue="overview" className="space-y-8">
           {/* Primary single-row navigation tabs list */}
-          <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm max-w-4xl w-full">
-            <TabsList className="bg-transparent p-0 h-auto w-full grid grid-cols-5 gap-1">
+          <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm max-w-5xl w-full overflow-x-auto">
+            <TabsList className="bg-transparent p-0 h-auto w-full grid grid-cols-6 gap-1 min-w-[700px]">
               <TabsTrigger value="overview" className="rounded-xl px-2 h-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap w-full">
                 Overview
               </TabsTrigger>
@@ -1450,6 +1488,9 @@ export function AdminDashboard() {
               </TabsTrigger>
               <TabsTrigger value="complaints" className="rounded-xl px-2 h-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap w-full">
                 Complaints ({complaints?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger value="account" className="rounded-xl px-2 h-10 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-slate-900 data-[state=active]:text-white whitespace-nowrap w-full">
+                Account
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1527,6 +1568,90 @@ export function AdminDashboard() {
           {/* Complaints Content */}
           <TabsContent value="complaints" className="outline-none">
             {renderComplaintsTable()}
+          </TabsContent>
+
+          {/* Account Settings Content */}
+          <TabsContent value="account" className="outline-none">
+            <Card className="rounded-[32px] border-none shadow-sm bg-white overflow-hidden max-w-3xl">
+              <CardHeader className="p-8 border-b border-slate-100">
+                <CardTitle className="text-2xl font-bold tracking-tight">Admin Account Settings</CardTitle>
+                <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Update your login credentials and contact information</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8">
+                <form onSubmit={handleAccountSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="adminEmail" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Email Address *</Label>
+                      <Input
+                        id="adminEmail"
+                        type="email"
+                        className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                        value={accountForm.email}
+                        onChange={e => setAccountForm({ ...accountForm, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="adminPhone" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Phone Number</Label>
+                      <Input
+                        id="adminPhone"
+                        type="tel"
+                        className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                        value={accountForm.phone}
+                        onChange={e => setAccountForm({ ...accountForm, phone: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="pt-6 border-t border-slate-100">
+                    <h3 className="text-sm font-bold text-slate-900 mb-4 tracking-tight">Change Password (Optional)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2 relative">
+                        <Label htmlFor="adminPass" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">New Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="adminPass"
+                            type={showAccountPassword ? "text" : "password"}
+                            placeholder="Leave blank to keep current"
+                            className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs pr-12 text-slate-800"
+                            value={accountForm.password}
+                            onChange={e => setAccountForm({ ...accountForm, password: e.target.value })}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowAccountPassword(!showAccountPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                          >
+                            {showAccountPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="adminPassConfirm" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Confirm New Password</Label>
+                        <Input
+                          id="adminPassConfirm"
+                          type={showAccountPassword ? "text" : "password"}
+                          placeholder="Confirm new password"
+                          className="h-14 bg-slate-50 border-transparent rounded-xl focus:bg-white border-2 font-bold text-xs text-slate-800"
+                          value={accountForm.confirmPassword}
+                          onChange={e => setAccountForm({ ...accountForm, confirmPassword: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 flex justify-end">
+                    <Button
+                      type="submit"
+                      className="h-14 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] px-10 shadow-xl active:scale-95 transition-all"
+                      disabled={loading}
+                    >
+                      {loading ? <Loader2 className="animate-spin" size={20} /> : 'UPDATE ACCOUNT SETTINGS'}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

@@ -15,6 +15,7 @@ import { CaregiverDashboard } from './pages/dashboard/CaregiverDashboard';
 import { AdminDashboard } from './pages/dashboard/AdminDashboard';
 import { LoginPage } from './pages/auth/Login';
 import { SignupPage } from './pages/auth/Signup';
+import { ResetPasswordPage } from './pages/auth/ResetPassword';
 import { Badge } from '@/components/ui/badge';
 import { BookCarePage } from './pages/BookCare';
 import { CaregiverProfilePage } from './pages/CaregiverProfile';
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="contact" element={<Navigate to="/" replace />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="signup" element={<SignupPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route 
             path="book-care" 
             element={
