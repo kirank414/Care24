@@ -35,7 +35,10 @@ router.post("/", async (req, res) => {
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
       try {
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "secret");
+        if (!process.env.JWT_SECRET) {
+          throw new Error("JWT_SECRET environment variable is not set");
+        }
+        const decoded: any = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id);
         if (user) {
           userId = user._id;

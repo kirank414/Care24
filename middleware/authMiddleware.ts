@@ -20,7 +20,10 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       token = req.headers.authorization.split(" ")[1];
 
       // Verify token
-      const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "care24_super_secret_key_123");
+      if (!process.env.JWT_SECRET) {
+        return res.status(500).json({ message: "JWT_SECRET environment variable is not set" });
+      }
+      const decoded: any = jwt.verify(token, process.env.JWT_SECRET);
 
       // Get user from the token
       if (!mongoose.Types.ObjectId.isValid(decoded.id)) {
